@@ -92,6 +92,8 @@ def main(argv):
     ctxvocab = ctxemb.get_vocab()
     ctxemb_matrix = ctxemb.get_emb()
 
+    evaluator = Evaluator(emb0, emb1)
+
     assert tuple(ctxvocab) == tuple(vocab)
 
     mono0 = LazyIndexCorpus(
@@ -325,9 +327,13 @@ def main(argv):
             # logging.info('comp_time = %s', dict_to_str(comp_time))
             # logging.info('load_time = %s', dict_to_str(load_time))
             # logging.info('total_time = %s', dict_to_str(get_total_time()))
-            logging.info('hit_count = %s', dict_to_str(hit_count))
+            # logging.info('hit_count = %s', dict_to_str(hit_count))
             # logging.info('iter_info = %s', dict_to_str(iter_info))
             logging.info('last_loss = %s', dict_to_str(last_loss))
+
+            # evaluate:
+            results = evaluator.word_translation()
+            print("results", results)
 
         # save model
         if should_exit or (total_this_comp_time - last_saving_time >

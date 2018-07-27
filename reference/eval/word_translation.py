@@ -115,6 +115,7 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
             matching[src_id] = min(matching.get(src_id, 0) + _matching[i], 1)
         # evaluate precision@k
         precision_at_k = 100 * np.mean(list(matching.values()))
+        print("precision", precision_at_k)
         logger.info("%i source words - %s - Precision at k = %i: %f" %
                     (len(matching), k, precision_at_k))
         results.append(('precision_at_%i' % k, precision_at_k))

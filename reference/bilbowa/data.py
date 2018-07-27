@@ -778,7 +778,7 @@ def pair2id(strong_pairs, weak_pairs, emb):
 
 def read_pair():
     strong = set()
-    with open("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/data/train/strong.txt") as f:
+    with open("../../data/train/strong.txt") as f:
         for line in f:
             line = line.strip().split("\t")
             strong.add((line[0],line[1]))
@@ -786,7 +786,7 @@ def read_pair():
 
 
     weak = set()
-    with open("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/data/train/weak.txt") as f:
+    with open("../../data/train/weak.txt") as f:
         for line in f:
             line = line.strip().split("\t")
             weak.add((line[0], line[1]))
