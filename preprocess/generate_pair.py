@@ -32,6 +32,8 @@ en_fr_pair = {}
 fr_en_pair = {}
 fr_unique = set()
 en_unique = set()
+strong = set()
+weak = set()
 
 ## read en-fr dict
 spamReader = csv.reader(open('../data/train/en_fr_train500_4.csv'), delimiter=',', quotechar='"',
@@ -58,7 +60,7 @@ for row in spamReader:
             value.add(i.lower())
             fr_unique.add(i.lower())
 
-    en_fr_pair.update({key: value})
+    en_fr_pair.setdefault(key, set()).update(value)
 
 
 
@@ -76,7 +78,7 @@ for row in spamReader:
 
 
     ##find pairs
-    key = row[0]
+    key = row[1]
     definition = row[2].split()
     value = set()
 
@@ -89,12 +91,12 @@ for row in spamReader:
             en_unique.add(i.lower())
 
 
-    fr_en_pair.update({key: value})
-
-strong = set()
+    fr_en_pair.setdefault(key, set()).update(value)
 
 
 
+
+'''
 ####find pair through embeddings:
 en_url = "../data/mono_embedding/wiki.en.vec"
 fr_url = "../data/mono_embedding/wiki.fr.vec"
@@ -120,7 +122,7 @@ for fr, en in exact_fr_en:
         strong.add((similar_word,en))
 
 
-print(len(strong))
+print("strong", len(strong))
 
 M = 0.7
 for fr, en in exact_fr_en:
@@ -150,7 +152,7 @@ for fr, en in exact_fr_en:
                 strong.add((fr_word,en))
 
 print(len(strong), "check2")
-
+'''
 
 
 
@@ -162,6 +164,8 @@ for en_key, fr_value in en_fr_pair.items():
             en_value = fr_en_pair[fr_word]
             if en_key in en_value:
                 strong.add((fr_word,en_key))
+            else:
+                weak.add((fr_word,en_key))
 
     ### generate strong pair from embedding
 
@@ -175,6 +179,17 @@ for fr_key, en_value in fr_en_pair.items():
             fr_value = en_fr_pair[en_word]
             if fr_key in fr_value:
                 strong.add((fr_key,en_word))
+            else:
+                weak.add((fr_key, en_word))
+
+
+intersect = set.intersection(strong, weak)
+print("intersect", intersect)
+if (len(intersect) != 0):
+    weak.remove(intersect)
+    print("remove")
+else:
+    print("didn't remove")
 
 
 
@@ -206,18 +221,20 @@ for row in txt:
 # print(strong)
 
 
-#strong = strong.union(exact_fr_en)
-
-
-
-######Fetch the definition
-with open("fr_words.txt", "w") as french:
-    with open("en_words.txt", "w") as english:
-        for i in exact_fr_en:
-            french.write(i[0]+'\n')
-            english.write(i[1]+'\n')
-
 '''
+
+
+strong = strong.union(exact_fr_en)
+
+with open("../data/train/strong.txt",'w') as f:
+    for item in strong:
+        strs = "\t".join(str(x) for x in item)
+        f.write(strs + "\n")
+
+with open("../data/train/weak.txt",'w') as f:
+    for item in weak:
+        strs = "\t".join(str(x) for x in item)
+        f.write(strs + "\n")
 
 
 print("end")

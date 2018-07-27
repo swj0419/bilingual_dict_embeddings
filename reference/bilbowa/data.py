@@ -259,7 +259,7 @@ class LazyIndexCorpus(object):
 
         self.max_lines = max_lines
         self.iter_async_allowed = iter_async_allowed
-        self.iter_async_nb_works = iter_async_nb_works
+        self.iter_async_nb_works = iter_async_nb_works ###???
         self.iter_async_look_ahead = iter_async_look_ahead
         self.iter_batch_size = iter_batch_size
 
@@ -307,9 +307,9 @@ class LazyIndexCorpus(object):
             'negative_sampler': negative_sampler,
         }
         if self.iter_async_allowed:
-            nb_proc = self.iter_async_nb_works
-            batche_size = self.iter_batch_size
-            look_ahead = self.iter_async_look_ahead
+            nb_proc = self.iter_async_nb_works ##????
+            batche_size = self.iter_batch_size ##????
+            look_ahead = self.iter_async_look_ahead ##?????/
 
             qin = Queue()
             qout = Queue()
@@ -749,3 +749,244 @@ class BilbowaIterator(object):
                          ' '.join([vocab[_] for _ in row_0]))
             logging.info('lang 1 sent %d %s', i,
                          ' '.join([vocab[_] for _ in row_1]))
+
+
+
+def pair2id(strong_pairs, weak_pairs, emb):
+    strong_id = set()
+    weak_id = set()
+    l0_dict = {}
+    l1_dict = {}
+
+    for pair in strong_pairs:
+        f=emb.encode(pair[0], lang_id=1)
+        e=emb.encode(pair[1], lang_id=0)
+        strong_id.add((f,e))
+        l1_dict.setdefault(f, set()).add(e)
+        l0_dict.setdefault(e, set()).add(f)
+
+
+
+    for pair in weak_pairs:
+        f=emb.encode(pair[0], lang_id=1)
+        e=emb.encode(pair[1], lang_id=0)
+        weak_id.add((f,e))
+        l1_dict.setdefault(f, set()).add(e)
+        l0_dict.setdefault(e, set()).add(f)
+
+    return strong_id, weak_id, l0_dict, l1_dict
+
+def read_pair():
+    strong = set()
+    with open("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/data/train/strong.txt") as f:
+        for line in f:
+            line = line.strip().split("\t")
+            strong.add((line[0],line[1]))
+
+
+
+    weak = set()
+    with open("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/data/train/weak.txt") as f:
+        for line in f:
+            line = line.strip().split("\t")
+            weak.add((line[0], line[1]))
+
+    return strong, weak
+
+
+class strong_pairIterator(object):
+    def __init__(self,
+                 strong_id,
+                 l0_unigram_table,
+                 l1_unigram_table,
+                 batch_size,
+                 negative_samples,
+                 l0_dict,
+                 l1_dict,
+                 epochs=-1
+                 ):
+        self.batch_size = batch_size
+        self.strong_id = strong_id
+        self.epochs = epochs
+        self.negative_samples = negative_samples
+        self.l0_unigram_table = l0_unigram_table
+        self.l1_unigram_table = l1_unigram_table
+        self.l0_dict = l0_dict
+        self.l1_dict = l1_dict
+
+
+
+    def strong_iter(self, epochs=None):
+        batch_size = self.batch_size
+        it = self.strong_iter_example(epochs=epochs)
+        epochs = self.epochs if epochs is None else epochs
+
+        l0_s_words = np.zeros(shape=batch_size, dtype=np.int32)
+        l1_s_words = np.zeros(shape=batch_size, dtype=np.int32)
+        labels = np.zeros(shape=batch_size, dtype=np.int32)
+        y = np.empty(shape=batch_size, dtype=np.float32)  # dummy
+
+        try:
+            while True:
+                y[:] = 0
+                for i in range(batch_size):
+                    pair, label, (epoch, instance),  = next(it)
+                    l0_s_words[i] = pair[0]
+                    l1_s_words[i] = pair[1]
+                    labels[i] = label
+
+                yield ([l0_s_words,l1_s_words, labels],y), (epoch, instance)
+
+        except StopIteration:
+            pass
+
+
+    def strong_iter_example(self, epochs=None):
+        epochs = self.epochs if epochs is None else epochs
+
+
+        epoch, instance = 0, 0
+        while True:
+            for pair in self.strong_id:
+                instance += 1
+
+                yield pair, 1, (epoch, instance)
+
+                l0_negative_list = self.l0_unigram_table.negative_sampler.sample(int(self.negative_samples/2)+3)
+                l1_negative_list = self.l1_unigram_table.negative_sampler.sample(int(self.negative_samples/2)+3)
+
+                count = 0
+                for id in l0_negative_list: ##l0 = en
+                    if(id in self.l1_dict[pair[0]]): ##l1 = fr
+                        print("CORRUPT")
+                        break
+                    else:
+                        if(count <= self.negative_samples/2):
+                            neg_pair = (pair[0],id)
+                            count += 1
+
+                            yield neg_pair, -1, (epoch, instance)
+
+                for id in l1_negative_list: #fr
+                    if(id in self.l0_dict[pair[1]]):
+                        print("CORRUPT")
+                        break
+                    else:
+                        if(count <= self.negative_samples):
+                            neg_pair = (id, pair[1])
+                            count += 1
+
+                            yield neg_pair, -1, (epoch, instance)
+
+            epoch += 1
+            if epochs > -1 and epoch >= epochs:
+                break
+
+
+class weak_pairIterator(object):
+    def __init__(self,
+                 weak_id,
+                 l0_unigram_table,
+                 l1_unigram_table,
+                 batch_size,
+                 negative_samples,
+                 l0_dict,
+                 l1_dict,
+                 epochs=-1
+                 ):
+        self.batch_size = batch_size
+        self.weak_id = weak_id
+        self.epochs = epochs
+        self.negative_samples = negative_samples
+        self.l0_unigram_table = l0_unigram_table
+        self.l1_unigram_table = l1_unigram_table
+        self.l0_dict = l0_dict
+        self.l1_dict = l1_dict
+
+
+    def weak_iter(self, epochs=None):
+        batch_size = self.batch_size
+        it = self.weak_iter_example(epochs=epochs)
+        epochs = self.epochs if epochs is None else epochs
+
+        l0_w_words = np.zeros(shape=batch_size, dtype=np.int32)
+        l1_w_words = np.zeros(shape=batch_size, dtype=np.int32)
+        labels = np.zeros(shape=batch_size, dtype=np.int32)
+        y = np.empty(shape=batch_size, dtype=np.float32)  # dummy
+
+        try:
+            while True:
+                y[:] = 0
+                for i in range(batch_size):
+                    pair, label, (epoch, instance) = next(it)
+                    l0_w_words[i] = pair[0]
+                    l1_w_words[i] = pair[1]
+                    labels[i] = label
+
+                yield ([l0_w_words,l1_w_words,labels],y), (epoch, instance)
+
+        except StopIteration:
+            pass
+
+
+    def weak_iter_example(self, epochs=None):
+        epochs = self.epochs if epochs is None else epochs
+
+
+        epoch, instance = 0, 0
+        while True:
+            for pair in self.weak_id:
+                instance += 1
+                yield pair,1,(epoch,instance)
+
+                l0_negative_list = self.l0_unigram_table.negative_sampler.sample(int(self.negative_samples / 2) + 3)
+                l1_negative_list = self.l1_unigram_table.negative_sampler.sample(int(self.negative_samples / 2) + 3)
+
+                count = 0
+                for id in l0_negative_list:
+                    if (id in self.l1_dict[pair[0]]):
+                        continue
+                    else:
+                        if (count <= self.negative_samples / 2):
+                            neg_pair = (pair[0],id)
+                            count += 1
+
+                            yield neg_pair, -1, (epoch, instance)
+                        else:
+                            break
+
+                for id in l1_negative_list:
+                    if (id in self.l0_dict[pair[1]]):
+
+                        continue
+                    else:
+                        if (count <= self.negative_samples):
+                            neg_pair = (id, pair[1])
+                            count += 1
+
+                            yield neg_pair, -1, (epoch, instance)
+                        else:
+                            break
+
+
+            epoch += 1
+            if epochs > -1 and epoch >= epochs:
+                break
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

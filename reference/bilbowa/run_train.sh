@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 
-data_root=~/rstore/repos/bilingual_dict_embeddings/reference/bilbowa/data_root
-model_root=~/rstore/repos/bilingual_dict_embeddings/reference/bilbowa/model_root
+data_root=../data_root
+model_root=../model_root
 
 mkdir -p "$data_root"
 mkdir -p "$model_root"

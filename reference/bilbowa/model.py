@@ -3,8 +3,7 @@
 import keras
 from keras import backend as K
 from keras.models import Sequential, Model
-from keras.layers import Dense, Activation, Dropout, Embedding, LSTM, CuDNNGRU, Bidirectional, \
-    Merge, BatchNormalization, merge, Conv1D, Dot, Multiply, Lambda, Subtract, TimeDistributed
+from keras.layers import Multiply,Dense, Activation, Dropout, Embedding, LSTM, CuDNNGRU, Bidirectional, BatchNormalization, merge, Conv1D, Dot, Multiply, Lambda, Subtract, TimeDistributed
 from keras.layers.core import Flatten, Reshape
 from keras.layers.pooling import MaxPooling1D, GlobalAveragePooling1D
 from keras.optimizers import Adam
@@ -48,7 +47,7 @@ def get_model(
             )
 
     word_emb = make_emb(word_emb_matrix, word_emb_trainable)
-    context_emb = make_emb(context_emb_matrix, context_emb_trainable)
+    context_emb = make_emb(context_emb_matrix, context_emb_trainable) ## Why context embedding
 
     # word2vec part. note that two langauges are dealt
     # in the same word2vec func.
@@ -75,6 +74,7 @@ def get_model(
     sent_0_embedded = word_emb(sent_0_input)
     sent_1_embedded = word_emb(sent_1_input)
 
+
     def encode_function(x):
         sent_embedded, mask = x
         sent_embedded = sent_embedded * K.expand_dims(mask, -1)
@@ -87,12 +87,12 @@ def get_model(
 
     encode = Lambda(encode_function)
 
-    sent_0_encoded = encode([sent_0_embedded, mask_0_input])
+    sent_0_encoded = encode([sent_0_embedded, mask_0_input]) ###why mask??
     sent_1_encoded = encode([sent_1_embedded, mask_1_input])
 
     diff_sent_encoded = Subtract()([sent_0_encoded, sent_1_encoded])
 
-    def scale_diff_function(x):
+    def scale_diff_function(x):  ###why mask??
         diff_sent_encoded, mask_0, mask_1 = x
         t = (K.sum(mask_0, axis=-1, keepdims=True) + K.sum(
             mask_1, axis=-1, keepdims=True)) * 0.5
@@ -112,11 +112,61 @@ def get_model(
     bilbowa_model_infer = Model(
         inputs=[sent_0_input, mask_0_input], outputs=sent_0_encoded)
 
+
+    # strong Pair model
+    l0_s = Input(shape=(1,))
+    l1_s = Input(shape=(1,))
+    label = Input(shape=(1,))
+
+
+    l0_s_embedded = word_emb(l0_s)
+    l1_s_embedded = word_emb(l1_s)
+
+    strong_output = Dot(axes=-1)([l0_s_embedded, l1_s_embedded])
+    print("OUTPUT", strong_output)
+    strong_output = Flatten()(strong_output)
+    print("OUTPUT", strong_output)
+    strong_output = Multiply()([strong_output, label])
+    print("OUTPUT", strong_output)
+
+
+    strong_pair_model = Model(inputs=[l0_s, l1_s,label], outputs=strong_output)
+
+    # infer
+    strong_pair_model_infer = Model(
+        inputs=[l0_s], outputs=Flatten()(l0_s_embedded))
+
+    # weak pair mode
+    l0_w = Input(shape=(1,))
+    l1_w = Input(shape=(1,))
+    label = Input(shape=(1,))
+
+    l0_w_embedded = word_emb(l0_w)
+    l1_w_embedded = word_emb(l1_w)
+
+    weak_output = Dot(axes=-1)([l0_w_embedded, l1_w_embedded])
+    weak_output = Flatten()(weak_output)
+    weak_output = Multiply()([weak_output, label])
+
+    weak_pair_model = Model(inputs=[l0_w, l1_w, label], outputs=weak_output)
+
+    # infer
+    weak_pair_model_infer = Model(
+        inputs=[l0_w], outputs=Flatten()(l0_w_embedded))
+
+
+
+
+
     return (
         word2vec_model,
         bilbowa_model,
+        strong_pair_model,
+        weak_pair_model,
         word2vec_model_infer,
         bilbowa_model_infer,
+        strong_pair_model_infer,
+        weak_pair_model_infer
     )
 
 
@@ -132,4 +182,13 @@ def word2vec_loss(y_true, y_pred):
 def bilbowa_loss(y_true, y_pred):
     # y_true is dummy here
     diff_sent_encoded = y_pred
-    return K.mean(K.square(diff_sent_encoded), axis=-1)
+    return K.mean(K.square(diff_sent_encoded), axis=-1) ###y_pred
+
+def strong_pair_loss(y_true, y_pred):
+    # y_true is dummy here
+    return 0.7*K.log(1+K.exp(-y_pred))
+
+def weak_pair_loss(y_true, y_pred):
+    # y_true is dummy here
+    return 0.3*K.log(1+K.exp(-y_pred))
+

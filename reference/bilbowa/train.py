@@ -13,9 +13,13 @@ import numpy as np
 
 from keras.optimizers import Adam
 
-from data import Embedding, MultiLanguageEmbedding, \
-    LazyIndexCorpus,  Word2vecIterator, BilbowaIterator
-from model import get_model, word2vec_loss, bilbowa_loss
+# from data import Embedding, MultiLanguageEmbedding, \
+#     LazyIndexCorpus,  Word2vecIterator, BilbowaIterator
+
+from data import *
+from model import get_model, word2vec_loss, bilbowa_loss, strong_pair_loss, weak_pair_loss
+
+
 
 FLAGS = flags.FLAGS
 
@@ -60,7 +64,7 @@ flags.DEFINE_boolean('context_emb_trainable', True, '')
 flags.DEFINE_boolean('encoder_target_no_gradient', True, '')
 flags.DEFINE_boolean('encoder_arch_version', 1, '')
 
-flags.DEFINE_float('logging_iterval', 5, '')
+flags.DEFINE_float('logging_iterval', 1, '')
 flags.DEFINE_float('saving_iterval', 3600, '')
 
 
@@ -74,6 +78,11 @@ def main(argv):
     emb = MultiLanguageEmbedding(emb0, emb1)
     vocab = emb.get_vocab()
     emb_matrix = emb.get_emb()
+
+    strong, weak = read_pair()
+    strong_id, weak_id, l0_dict, l1_dict = pair2id(strong, weak, emb)
+
+
 
     ctxemb0 = Embedding(join(FLAGS.data_root, FLAGS.lang0_ctxemb_file))
     ctxemb1 = Embedding(join(FLAGS.data_root, FLAGS.lang1_ctxemb_file))
@@ -128,11 +137,44 @@ def main(argv):
         batch_size=FLAGS.bilbowa_batch_size,
     )
 
+    # strong pair iterator
+    strong_batch_size = 1000
+    strong_negative_size = 10
+    strong_pair_iterator = strong_pairIterator(
+        strong_id,
+        mono0_unigram_table,
+        mono1_unigram_table,
+        batch_size = strong_batch_size,
+        negative_samples = strong_negative_size,
+        l0_dict = l0_dict,
+        l1_dict = l1_dict
+    )
+
+    # weak pair iterator
+    weak_batch_size = 3000
+    weak_negative_size = 10
+    weak_pair_iterator = weak_pairIterator(
+        weak_id,
+        mono0_unigram_table,
+        mono1_unigram_table,
+        batch_size=weak_batch_size,
+        negative_samples=weak_negative_size,
+        l0_dict=l0_dict,
+        l1_dict=l1_dict
+    )
+
+
+
+
     (
         word2vec_model,
         bilbowa_model,
+        strong_pair_model,
+        weak_pair_model,
         word2vec_model_infer,
         bilbowa_model_infer,
+        strong_pair_model_infer,
+        weak_pair_model_infer
     ) = get_model(
         nb_word=len(vocab),
         dim=FLAGS.emb_dim,
@@ -146,19 +188,39 @@ def main(argv):
     word2vec_model.summary()
     logging.info('bilbowa_model.summary()')
     bilbowa_model.summary()
+    logging.info('strong_pair_model.summary()')
+    strong_pair_model.summary()
 
     word2vec_model.compile(
         optimizer=(Adam(amsgrad=True) if FLAGS.word2vec_lr < 0 else Adam(
-            lr=FLAGS.word2vec_lr, amsgrad=True)),
+            lr=FLAGS.word2vec_lr, amsgraword2vec_modeld=True)),
         loss=word2vec_loss)
     bilbowa_model.compile(
         optimizer=(Adam(amsgrad=True) if FLAGS.bilbowa_lr < 0 else Adam(
             lr=FLAGS.bilbowa_lr, amsgrad=True)),
         loss=bilbowa_loss)
 
+    strong_pair_model_lr = 0.001
+    strong_pair_model.compile(
+        optimizer=(Adam(amsgrad=True) if strong_pair_model_lr < 0 else Adam(
+            lr=strong_pair_model_lr, amsgrad=True)),
+        loss=strong_pair_loss)
+
+    weak_pair_model_lr = 0.001
+    weak_pair_model.compile(
+        optimizer=(Adam(amsgrad=True) if weak_pair_model_lr < 0 else Adam(
+            lr=weak_pair_model_lr, amsgrad=True)),
+        loss=weak_pair_loss)
+
+
     mono0_iter = mono0_iterator.fast2_iter()
     mono1_iter = mono1_iterator.fast2_iter()
     multi_iter = multi_iterator.iter()
+    strong_iter = strong_pair_iterator.strong_iter()
+    weak_iter = weak_pair_iterator.weak_iter()
+    # weak
+
+
 
     keys = []
     if FLAGS.train_mono:
@@ -166,6 +228,8 @@ def main(argv):
         keys.append('mono1')
     if FLAGS.train_multi:
         keys.append('multi')
+    keys.append('strong_pair')
+    keys.append('weak_pair')
     keys = tuple(keys)
 
     def dict_to_str(d):
@@ -213,6 +277,20 @@ def main(argv):
             start_time = time.time()
             loss = bilbowa_model.train_on_batch(x=x, y=y)
             this_comp_time = time.time() - start_time
+        elif next_key == 'strong_pair':
+            start_time = time.time()
+            (x, y), (epoch, instance) = next(strong_iter)
+            this_load_time = time.time() - start_time
+            start_time = time.time()
+            loss = strong_pair_model.train_on_batch(x=x, y=y)
+            this_comp_time = time.time() - start_time
+        elif next_key == 'weak_pair':
+            start_time = time.time()
+            (x, y), (epoch, instance) = next(weak_iter)
+            this_load_time = time.time() - start_time
+            start_time = time.time()
+            loss = weak_pair_model.train_on_batch(x=x, y=y)
+            this_comp_time = time.time() - start_time
         else:
             assert False
 
@@ -240,15 +318,16 @@ def main(argv):
         if should_exit or (total_this_comp_time - last_logging_time >
                            FLAGS.logging_iterval):
             last_logging_time = total_this_comp_time
-            logging.info('Stats so far')
-            logging.info('next_key = %s', next_key)
-            logging.info('comp_time = %s', dict_to_str(comp_time))
-            logging.info('load_time = %s', dict_to_str(load_time))
-            logging.info('total_time = %s', dict_to_str(get_total_time()))
+            # logging.info('Stats so far')
+            # logging.info('next_key = %s', next_key)
+            # logging.info('comp_time = %s', dict_to_str(comp_time))
+            # logging.info('load_time = %s', dict_to_str(load_time))
+            # logging.info('total_time = %s', dict_to_str(get_total_time()))
             logging.info('hit_count = %s', dict_to_str(hit_count))
-            logging.info('iter_info = %s', dict_to_str(iter_info))
+            # logging.info('iter_info = %s', dict_to_str(iter_info))
             logging.info('last_loss = %s', dict_to_str(last_loss))
 
+        # save model
         if should_exit or (total_this_comp_time - last_saving_time >
                            FLAGS.saving_iterval):
             last_saving_time = total_this_comp_time
@@ -268,7 +347,6 @@ def main(argv):
 
 
 import pdb, traceback, sys, code  # noqa
-
 if __name__ == '__main__':
     try:
         app.run(main)
