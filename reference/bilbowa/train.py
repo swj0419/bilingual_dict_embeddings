@@ -4,6 +4,7 @@ import math
 import os
 from os.path import join
 import time
+import sys
 
 from absl import app
 from absl import flags
@@ -18,7 +19,8 @@ from keras.optimizers import Adam
 
 from data import *
 from model import get_model, word2vec_loss, bilbowa_loss, strong_pair_loss, weak_pair_loss
-
+sys.path.insert(0, '/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/reference/eval')
+from evaluate import Evaluator
 
 
 FLAGS = flags.FLAGS
