@@ -12,9 +12,7 @@ class Evaluator(object):
         self.tgt_lang = "fr"
         self.dico_eval = "default"
 
-
-
-   def word_translation(self):
+    def word_translation(self):
         """
         Evaluation on word translation.
         """
@@ -27,5 +25,5 @@ class Evaluator(object):
             self.tgt_lang, self.tgt_dico, tgt_emb,
             dico_eval=self.dico_eval)
 
-        print("word translation", results) #log
+        return results
 

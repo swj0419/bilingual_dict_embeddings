@@ -80,7 +80,7 @@ def load_dictionary(path, word2id1, word2id2):
     return dico
 
 
-def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, method, dico_eval):
+def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, dico_eval):
     """
     Given source and target word embeddings, and a dictionary,
     evaluate the translation accuracy using the precision@k.
@@ -90,10 +90,10 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     else:
         path = dico_eval
     dico = load_dictionary(path, word2id1, word2id2)
-    dico = dico.cuda() if emb1.is_cuda else dico
+    # dico = dico.cuda() if emb1.is_cuda else dico
 
-    assert dico[:, 0].max() < emb1.size(0)
-    assert dico[:, 1].max() < emb2.size(0)
+    # assert dico[:, 0].max() < emb1.size(0)
+    # assert dico[:, 1].max() < emb2.size(0)
 
     # # normalize word embeddings
     # emb1 = emb1 / emb1.norm(2, 1, keepdim=True).expand_as(emb1)
@@ -116,7 +116,7 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
         # evaluate precision@k
         precision_at_k = 100 * np.mean(list(matching.values()))
         logger.info("%i source words - %s - Precision at k = %i: %f" %
-                    (len(matching), method, k, precision_at_k))
+                    (len(matching), k, precision_at_k))
         results.append(('precision_at_%i' % k, precision_at_k))
 
     return results
