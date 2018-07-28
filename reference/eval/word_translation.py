@@ -14,6 +14,7 @@ import torch
 
 
 
+
 DIC_EVAL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.', 'data', 'crosslingual', 'dictionaries')
 
 
@@ -102,6 +103,7 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     # nearest neighbors
 
     query = emb1[dico[:, 0]]
+
     scores = query.mm(emb2.transpose(0, 1))
 
     results = []
