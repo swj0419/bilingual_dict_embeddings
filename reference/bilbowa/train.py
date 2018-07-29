@@ -82,7 +82,6 @@ def main(argv):
     emb_matrix = emb.get_emb()
 
     evaluator = Evaluator(emb0, emb1)
-    results = evaluator.word_translation()
 
     strong, weak = read_pair()
     strong_id, weak_id, l0_dict, l1_dict = pair2id(strong, weak, emb)
