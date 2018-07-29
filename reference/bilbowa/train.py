@@ -326,6 +326,8 @@ def main(argv):
             print(next_key)
             logging.info('last_loss = %s', dict_to_str(last_loss))
 
+        if should_exit or (total_this_comp_time - last_logging_time >
+                           50):
             # evaluate:
             if (next_key == 'mono1' or next_key == 'mono0'):
                 pass
