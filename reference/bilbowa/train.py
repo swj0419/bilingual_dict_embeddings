@@ -83,7 +83,6 @@ def main(argv):
     vocab = emb.get_vocab()
     emb_matrix = emb.get_emb()
 
-    evaluator = Evaluator(emb.emb[0], emb.emb[1])
     # results = evaluator.word_translation()
 
     strong, weak = read_pair()
@@ -330,6 +329,7 @@ def main(argv):
             if (next_key == 'mono1'):
                 pass
             else:
+                evaluator = Evaluator(emb.emb[0], emb.emb[1])
                 results = evaluator.word_translation()
 
         # save model
