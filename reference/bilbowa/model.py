@@ -18,8 +18,7 @@ from keras.optimizers import TFOptimizer
 from keras.utils import plot_model
 
 
-
-config = tf.ConfigProto( device_count = {'GPU': 4 , 'CPU': 30} )
+config = tf.ConfigProto( device_count = {'GPU': 4 , 'CPU': 20} )
 sess = tf.Session(config=config)
 keras.backend.set_session(sess)
 

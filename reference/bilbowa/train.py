@@ -14,6 +14,8 @@ import numpy as np
 
 from keras.optimizers import Adam
 
+
+
 # from data import Embedding, MultiLanguageEmbedding, \
 #     LazyIndexCorpus,  Word2vecIterator, BilbowaIterator
 
@@ -81,21 +83,17 @@ def main(argv):
     vocab = emb.get_vocab()
     emb_matrix = emb.get_emb()
 
-    evaluator = Evaluator(emb0, emb1)
-    results = evaluator.word_translation()
+    evaluator = Evaluator(emb.emb[0], emb.emb[1])
+    # results = evaluator.word_translation()
 
     strong, weak = read_pair()
     strong_id, weak_id, l0_dict, l1_dict = pair2id(strong, weak, emb)
-
-
 
     ctxemb0 = Embedding(join(FLAGS.data_root, FLAGS.lang0_ctxemb_file))
     ctxemb1 = Embedding(join(FLAGS.data_root, FLAGS.lang1_ctxemb_file))
     ctxemb = MultiLanguageEmbedding(ctxemb0, ctxemb1)
     ctxvocab = ctxemb.get_vocab()
     ctxemb_matrix = ctxemb.get_emb()
-
-
 
     assert tuple(ctxvocab) == tuple(vocab)
 
@@ -170,9 +168,6 @@ def main(argv):
         l1_dict=l1_dict
     )
 
-
-
-
     (
         word2vec_model,
         bilbowa_model,
@@ -218,7 +213,6 @@ def main(argv):
         optimizer=(Adam(amsgrad=True) if weak_pair_model_lr < 0 else Adam(
             lr=weak_pair_model_lr, amsgrad=True)),
         loss=weak_pair_loss)
-
 
     mono0_iter = mono0_iterator.fast2_iter()
     mono1_iter = mono1_iterator.fast2_iter()
