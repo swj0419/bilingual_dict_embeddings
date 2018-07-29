@@ -9,11 +9,19 @@ from keras.layers.pooling import MaxPooling1D, GlobalAveragePooling1D
 from keras.optimizers import Adam
 from keras.layers import Input
 import tensorflow as tf
+
+
+
 from keras.initializers import RandomNormal
 from keras.layers.merge import dot
 from keras.optimizers import TFOptimizer
 from keras.utils import plot_model
 
+
+
+config = tf.ConfigProto( device_count = {'GPU': 4 , 'CPU': 30} )
+sess = tf.Session(config=config)
+keras.backend.set_session(sess)
 
 def get_model(
         nb_word,

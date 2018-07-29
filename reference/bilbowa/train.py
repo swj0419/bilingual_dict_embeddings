@@ -66,7 +66,7 @@ flags.DEFINE_boolean('context_emb_trainable', True, '')
 flags.DEFINE_boolean('encoder_target_no_gradient', True, '')
 flags.DEFINE_boolean('encoder_arch_version', 1, '')
 
-flags.DEFINE_float('logging_iterval', 1, '')
+flags.DEFINE_float('logging_iterval', 5, '')
 flags.DEFINE_float('saving_iterval', 3600, '')
 
 
@@ -337,7 +337,7 @@ def main(argv):
                 pass
             else:
                 results = evaluator.word_translation()
-                
+
         # save model
         if should_exit or (total_this_comp_time - last_saving_time >
                            FLAGS.saving_iterval):
