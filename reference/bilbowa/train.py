@@ -19,7 +19,7 @@ from keras.optimizers import Adam
 
 from data import *
 from model import get_model, word2vec_loss, bilbowa_loss, strong_pair_loss, weak_pair_loss
-sys.path.insert(0, '../../eval')
+sys.path.insert(0, '../eval')
 from evaluate import Evaluator
 
 
@@ -49,10 +49,10 @@ flags.DEFINE_integer('emb_dim', 50, '')
 flags.DEFINE_float('emb_subsample', 1e-5, '')
 flags.DEFINE_integer('word2vec_negative_size', 10, '')
 flags.DEFINE_integer('word2vec_batch_size', 100000, '')
-flags.DEFINE_float('word2vec_lr', -1., '(Negative for default)')
+flags.DEFINE_float('word2vec_lr', 0.001, '(Negative for default)')
 flags.DEFINE_integer('bilbowa_sent_length', 50, '')
 flags.DEFINE_integer('bilbowa_batch_size', 100, '')
-flags.DEFINE_float('bilbowa_lr', -1., '(Negative for default)')
+flags.DEFINE_float('bilbowa_lr', 0.001., '(Negative for default)')
 flags.DEFINE_integer('encoder_desc_length', 15, '')
 flags.DEFINE_integer('encoder_batch_size', 50, '')
 flags.DEFINE_float('encoder_lr', 0.0002, '')
@@ -81,6 +81,9 @@ def main(argv):
     vocab = emb.get_vocab()
     emb_matrix = emb.get_emb()
 
+    evaluator = Evaluator(emb0, emb1)
+    results = evaluator.word_translation()
+
     strong, weak = read_pair()
     strong_id, weak_id, l0_dict, l1_dict = pair2id(strong, weak, emb)
 
@@ -92,7 +95,7 @@ def main(argv):
     ctxvocab = ctxemb.get_vocab()
     ctxemb_matrix = ctxemb.get_emb()
 
-    evaluator = Evaluator(emb0, emb1)
+
 
     assert tuple(ctxvocab) == tuple(vocab)
 
@@ -330,7 +333,6 @@ def main(argv):
 
             # evaluate:
             results = evaluator.word_translation()
-            print("results", results)
 
         # save model
         if should_exit or (total_this_comp_time - last_saving_time >
