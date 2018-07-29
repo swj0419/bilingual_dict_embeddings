@@ -19,7 +19,7 @@ from keras.optimizers import Adam
 
 from data import *
 from model import get_model, word2vec_loss, bilbowa_loss, strong_pair_loss, weak_pair_loss
-sys.path.insert(0, '../../eval')
+sys.path.insert(0, '../eval')
 from evaluate import Evaluator
 
 
@@ -82,6 +82,7 @@ def main(argv):
     emb_matrix = emb.get_emb()
 
     evaluator = Evaluator(emb0, emb1)
+    results = evaluator.word_translation()
 
     strong, weak = read_pair()
     strong_id, weak_id, l0_dict, l1_dict = pair2id(strong, weak, emb)
