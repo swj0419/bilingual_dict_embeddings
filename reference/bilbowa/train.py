@@ -70,7 +70,7 @@ flags.DEFINE_float('logging_iterval', 1, '')
 flags.DEFINE_float('saving_iterval', 3600, '')
 
 
-def main(argv):
+if __name__ == '__main__':
     del argv  # Unused.
 
     os.system('mkdir -p "%s"' % FLAGS.model_root)
@@ -353,11 +353,11 @@ def main(argv):
             break
 
 
-import pdb, traceback, sys, code  # noqa
-if __name__ == '__main__':
-    try:
-        app.run(main)
-    except Exception:
-        type, value, tb = sys.exc_info()
-        traceback.print_exc()
-        pdb.post_mortem(tb)
+# import pdb, traceback, sys, code  # noqa
+# if __name__ == '__main__':
+#     try:
+#         app.run(main)
+#     except Exception:
+#         type, value, tb = sys.exc_info()
+#         traceback.print_exc()
+#         pdb.post_mortem(tb)
