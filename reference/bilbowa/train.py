@@ -223,7 +223,7 @@ def main(argv):
     keys = []
     if FLAGS.train_mono:
         keys.append('mono0')
-        keys.append('mono1')
+        # keys.append('mono1')
     if FLAGS.train_multi:
         keys.append('multi')
     keys.append('strong_pair')
