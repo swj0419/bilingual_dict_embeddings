@@ -19,7 +19,7 @@ from keras.optimizers import Adam
 
 from data import *
 from model import get_model, word2vec_loss, bilbowa_loss, strong_pair_loss, weak_pair_loss
-sys.path.insert(0, '../eval')
+sys.path.insert(0, '../../eval')
 from evaluate import Evaluator
 
 
