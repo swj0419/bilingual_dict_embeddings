@@ -199,7 +199,7 @@ def main(argv):
 
     word2vec_model.compile(
         optimizer=(Adam(amsgrad=True) if FLAGS.word2vec_lr < 0 else Adam(
-            lr=FLAGS.word2vec_lr, amsgraword2vec_modeld=True)),
+            lr=FLAGS.word2vec_lr, amsgrad=True)),
         loss=word2vec_loss)
     bilbowa_model.compile(
         optimizer=(Adam(amsgrad=True) if FLAGS.bilbowa_lr < 0 else Adam(
