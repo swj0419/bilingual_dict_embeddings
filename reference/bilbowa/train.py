@@ -247,6 +247,7 @@ def main(argv):
     last_logging_time = 0.
     loss_decay = 0.6
     last_saving_time = 0.
+    last_eval_time = 0
 
     while True:
         total_time = get_total_time()
@@ -327,10 +328,10 @@ def main(argv):
             logging.info('last_loss = %s', dict_to_str(last_loss))
 
         print("time", total_this_comp_time - last_logging_time)
-        print("total_this_comp_time", total_this_comp_time)
-        print("last_logging_time", last_logging_time)
-        if should_exit or (total_this_comp_time - last_logging_time >
+
+        if should_exit or (total_this_comp_time - last_eval_time >
                            50):
+            last_eval_time = total_this_comp_time
             # evaluate:
             if (next_key == 'mono1' or next_key == 'mono0'):
                 pass
