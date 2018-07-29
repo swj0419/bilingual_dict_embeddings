@@ -13,7 +13,7 @@ from tqdm import tqdm
 import numpy as np
 
 from keras.optimizers import Adam
-
+import tensorflow as tf
 
 
 # from data import Embedding, MultiLanguageEmbedding, \
@@ -175,7 +175,8 @@ def main(argv):
         word2vec_model_infer,
         bilbowa_model_infer,
         strong_pair_model_infer,
-        weak_pair_model_infer
+        weak_pair_model_infer,
+        word_emb
     ) = get_model(
         nb_word=len(vocab),
         dim=FLAGS.emb_dim,
@@ -326,10 +327,13 @@ def main(argv):
             logging.info('last_loss = %s', dict_to_str(last_loss))
 
             # evaluate:
-            if (next_key == 'mono1'):
+            if (next_key == 'mono1' or next_key == 'mono0'):
                 pass
             else:
-                evaluator = Evaluator(emb.emb[0], emb.emb[1])
+                # emb_1_index = np.array(range(995000)).reshape((-1,1))
+                # emb_2_index = np.array(range(995000, 432455)).reshape((-1, 1))
+                word_emb_np = word_emb.get_weights()[0]
+                evaluator = Evaluator(word_emb_np[0:995000,:],word_emb_np[995000:,:], emb0.vocablower2id, emb1.vocablower2id)
                 results = evaluator.word_translation()
 
         # save model

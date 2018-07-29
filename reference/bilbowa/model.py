@@ -173,7 +173,8 @@ def get_model(
         word2vec_model_infer,
         bilbowa_model_infer,
         strong_pair_model_infer,
-        weak_pair_model_infer
+        weak_pair_model_infer,
+        word_emb
     )
 
 

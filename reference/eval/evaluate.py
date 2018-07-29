@@ -3,11 +3,11 @@ from word_translation import*
 import torch
 
 class Evaluator(object):
-    def __init__(self, emb0, emb1):
-        self.src_emb = torch.tensor(emb0.get_emb())
-        self.tgt_emb = torch.tensor(emb1.get_emb())
-        self.src_dico = emb0.vocablower2id
-        self.tgt_dico = emb1.vocablower2id
+    def __init__(self, emb0, emb1, emb0_vocablower2id, emb1_vocablower2id):
+        self.src_emb = torch.tensor(emb0)
+        self.tgt_emb = torch.tensor(emb1)
+        self.src_dico = emb0_vocablower2id
+        self.tgt_dico = emb1_vocablower2id
         self.src_lang = "en"
         self.tgt_lang = "fr"
         self.dico_eval = "default"

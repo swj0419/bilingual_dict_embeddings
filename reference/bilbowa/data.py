@@ -52,12 +52,17 @@ class Embedding(object):
         vocab, emb = [], []
         fin = open(filepath, errors='surrogateescape')
         n, dim = map(int, fin.readline().strip().split())
+        count = 0
         for i in tqdm(range(n), unit=' words'):
             tokens = fin.readline().strip().split()
             if len(tokens) == dim + 1:
                 vocab.append(tokens[0])
                 if keep_emb:
                     emb.append(tokens[1:])
+            # not load all embedding
+            # count += 1
+            # if(count == 20000):
+            #     break
 
         emb = np.array(emb, dtype='f')
         fin.close()

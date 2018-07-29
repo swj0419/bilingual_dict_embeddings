@@ -105,6 +105,7 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     scores = query.mm(emb2.transpose(0, 1))
     results = []
     top_matches = scores.topk(10, 1, True)[1]
+    print(top_matches)
     for k in [1, 5, 10]:
         top_k_matches = top_matches[:, :k]
         _matching = (top_k_matches == dico[:, 1][:, None].expand_as(top_k_matches)).sum(1)
