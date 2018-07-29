@@ -70,7 +70,9 @@ flags.DEFINE_float('logging_iterval', 1, '')
 flags.DEFINE_float('saving_iterval', 3600, '')
 
 
-if __name__ == '__main__':
+def main(argv):
+    del argv  # Unused.
+
     os.system('mkdir -p "%s"' % FLAGS.model_root)
 
     emb0 = Embedding(join(FLAGS.data_root, FLAGS.lang0_emb_file))
@@ -331,11 +333,11 @@ if __name__ == '__main__':
             logging.info('last_loss = %s', dict_to_str(last_loss))
 
             # evaluate:
-            if(next_key == 'mono1'):
+            if (next_key == 'mono1'):
                 pass
             else:
                 results = evaluator.word_translation()
-
+                
         # save model
         if should_exit or (total_this_comp_time - last_saving_time >
                            FLAGS.saving_iterval):
@@ -355,11 +357,11 @@ if __name__ == '__main__':
             break
 
 
-# import pdb, traceback, sys, code  # noqa
-# if __name__ == '__main__':
-#     try:
-#         app.run(main)
-#     except Exception:
-#         type, value, tb = sys.exc_info()
-#         traceback.print_exc()
-#         pdb.post_mortem(tb)
+import pdb, traceback, sys, code  # noqa
+if __name__ == '__main__':
+    try:
+        app.run(main)
+    except Exception:
+        type, value, tb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(tb)
