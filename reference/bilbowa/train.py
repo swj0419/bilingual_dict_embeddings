@@ -71,8 +71,6 @@ flags.DEFINE_float('saving_iterval', 3600, '')
 
 
 if __name__ == '__main__':
-    del argv  # Unused.
-
     os.system('mkdir -p "%s"' % FLAGS.model_root)
 
     emb0 = Embedding(join(FLAGS.data_root, FLAGS.lang0_emb_file))
@@ -329,10 +327,14 @@ if __name__ == '__main__':
             # logging.info('total_time = %s', dict_to_str(get_total_time()))
             # logging.info('hit_count = %s', dict_to_str(hit_count))
             # logging.info('iter_info = %s', dict_to_str(iter_info))
+            print(next_key)
             logging.info('last_loss = %s', dict_to_str(last_loss))
 
             # evaluate:
-            results = evaluator.word_translation()
+            if(next_key == 'mono1'):
+                pass
+            else:
+                results = evaluator.word_translation()
 
         # save model
         if should_exit or (total_this_comp_time - last_saving_time >
