@@ -279,6 +279,7 @@ def main(argv):
         elif next_key == 'strong_pair':
             start_time = time.time()
             (x, y), (epoch, instance) = next(strong_iter)
+            print("strong_pair", x)
             this_load_time = time.time() - start_time
             start_time = time.time()
             loss = strong_pair_model.train_on_batch(x=x, y=y)

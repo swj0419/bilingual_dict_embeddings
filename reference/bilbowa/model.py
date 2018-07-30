@@ -125,16 +125,14 @@ def get_model(
     l1_s = Input(shape=(1,))
     label = Input(shape=(1,))
 
-
+    print("l0_s", l0_s)
+    print("l1_s", l1_s)
     l0_s_embedded = word_emb(l0_s)
     l1_s_embedded = word_emb(l1_s)
 
     strong_output = Dot(axes=-1)([l0_s_embedded, l1_s_embedded])
-    print("OUTPUT", strong_output)
     strong_output = Flatten()(strong_output)
-    print("OUTPUT", strong_output)
     strong_output = Multiply()([strong_output, label])
-    print("OUTPUT", strong_output)
 
 
     strong_pair_model = Model(inputs=[l0_s, l1_s,label], outputs=strong_output)
@@ -179,9 +177,6 @@ def get_model(
 
 
 def word2vec_loss(y_true, y_pred):
-    # y_true is label (0 or 1)
-    # y_pred is the dot prod
-
     # 0 / 1 -> 1. -> -1.
     a = (K.cast(y_true, dtype='float32') * 2 - 1.0) * (-1.0)
     return K.softplus(a * y_pred)
