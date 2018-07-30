@@ -87,6 +87,7 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     """
     if dico_eval == 'default':
         path = os.path.join(DIC_EVAL_PATH, '%s-%s.5000-6500.txt' % (lang1, lang2))
+        print("dico_path", path)
 
     else:
         path = dico_eval
@@ -105,7 +106,9 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     scores = query.mm(emb2.transpose(0, 1))
     results = []
     top_matches = scores.topk(10, 1, True)[1]
-    print(top_matches)
+    top_scores = scores.topk(10, 1, True)[0]
+    print("top_matches", top_matches)
+    print("top_matches_scores", top_scores)
     for k in [1, 5, 10]:
         top_k_matches = top_matches[:, :k]
         _matching = (top_k_matches == dico[:, 1][:, None].expand_as(top_k_matches)).sum(1)
@@ -113,6 +116,7 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
         matching = {}
         for i, src_id in enumerate(dico[:, 0].cpu().numpy()):
             matching[src_id] = min(matching.get(src_id, 0) + _matching[i], 1)
+        print("matching", matching)
         # evaluate precision@k
         precision_at_k = 100 * np.mean(list(matching.values()))
         logger.info("%i source words - Precision at k = %i: %f" %
