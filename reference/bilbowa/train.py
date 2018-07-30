@@ -143,7 +143,7 @@ def main(argv):
 
     # strong pair iterator
     strong_batch_size = 1000
-    strong_negative_size = 0
+    strong_negative_size = 5
     strong_pair_iterator = strong_pairIterator(
         strong_id,
         mono0_unigram_table,
@@ -156,7 +156,7 @@ def main(argv):
 
     # weak pair iterator
     weak_batch_size = 3000
-    weak_negative_size = 0
+    weak_negative_size = 5
     weak_pair_iterator = weak_pairIterator(
         weak_id,
         mono0_unigram_table,
@@ -202,13 +202,13 @@ def main(argv):
             lr=FLAGS.bilbowa_lr, amsgrad=True)),
         loss=bilbowa_loss)
 
-    strong_pair_model_lr = 0.001
+    strong_pair_model_lr = 0.0001
     strong_pair_model.compile(
         optimizer=(Adam(amsgrad=True) if strong_pair_model_lr < 0 else Adam(
             lr=strong_pair_model_lr, amsgrad=True)),
         loss=strong_pair_loss)
 
-    weak_pair_model_lr = 0.001
+    weak_pair_model_lr = 0.0001
     weak_pair_model.compile(
         optimizer=(Adam(amsgrad=True) if weak_pair_model_lr < 0 else Adam(
             lr=weak_pair_model_lr, amsgrad=True)),
@@ -279,7 +279,6 @@ def main(argv):
         elif next_key == 'strong_pair':
             start_time = time.time()
             (x, y), (epoch, instance) = next(strong_iter)
-            print("strong_pair", x)
             this_load_time = time.time() - start_time
             start_time = time.time()
             loss = strong_pair_model.train_on_batch(x=x, y=y)
@@ -329,18 +328,16 @@ def main(argv):
             logging.info('last_loss = %s', dict_to_str(last_loss))
 
 
-        if should_exit or (total_this_comp_time - last_eval_time >
-                           50):
-            last_eval_time = total_this_comp_time
-            # evaluate:
-            if (next_key == 'mono1' or next_key == 'mono0'):
-                pass
-            else:
-                # emb_1_index = np.array(range(995000)).reshape((-1,1))
-                # emb_2_index = np.array(range(995000, 432455)).reshape((-1, 1))
-                word_emb_np = word_emb.get_weights()[0]
-                evaluator = Evaluator(word_emb_np[0:995000,:],word_emb_np[995000:,:], emb0.vocablower2id, emb1.vocablower2id)
-                results = evaluator.word_translation()
+        # if should_exit or (total_this_comp_time - last_eval_time >
+        #                    50):
+        #     last_eval_time = total_this_comp_time
+        #     # evaluate:
+        #     if (next_key == 'mono1' or next_key == 'mono0'):
+        #         pass
+        #     else:
+        #         word_emb_np = word_emb.get_weights()[0]
+        #         evaluator = Evaluator(word_emb_np[0:995000,:],word_emb_np[995000:,:], emb0.vocablower2id, emb1.vocablower2id)
+        #         results = evaluator.word_translation()
 
         # save model
         if should_exit or (total_this_comp_time - last_saving_time >

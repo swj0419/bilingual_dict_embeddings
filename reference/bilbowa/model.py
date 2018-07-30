@@ -125,14 +125,15 @@ def get_model(
     l1_s = Input(shape=(1,))
     label = Input(shape=(1,))
 
-    print("l0_s", l0_s)
-    print("l1_s", l1_s)
+
     l0_s_embedded = word_emb(l0_s)
     l1_s_embedded = word_emb(l1_s)
 
     strong_output = Dot(axes=-1)([l0_s_embedded, l1_s_embedded])
     strong_output = Flatten()(strong_output)
+    print("strong_output", strong_output)
     strong_output = Multiply()([strong_output, label])
+    print("strong_output_negative", strong_output)
 
 
     strong_pair_model = Model(inputs=[l0_s, l1_s,label], outputs=strong_output)
@@ -158,10 +159,6 @@ def get_model(
     # infer
     weak_pair_model_infer = Model(
         inputs=[l0_w], outputs=Flatten()(l0_w_embedded))
-
-
-
-
 
     return (
         word2vec_model,
