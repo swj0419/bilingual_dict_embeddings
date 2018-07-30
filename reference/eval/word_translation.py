@@ -12,9 +12,6 @@ import numpy as np
 import torch
 
 
-
-
-
 DIC_EVAL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.', 'data', 'crosslingual', 'dictionaries')
 
 
@@ -97,9 +94,9 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     assert dico[:, 0].max() < emb1.size(0)
     assert dico[:, 1].max() < emb2.size(0)
 
-    # # normalize word embeddings
-    # emb1 = emb1 / emb1.norm(2, 1, keepdim=True).expand_as(emb1)
-    # emb2 = emb2 / emb2.norm(2, 1, keepdim=True).expand_as(emb2)
+    # normalize word embeddings
+    emb1 = emb1 / emb1.norm(2, 1, keepdim=True).expand_as(emb1)
+    emb2 = emb2 / emb2.norm(2, 1, keepdim=True).expand_as(emb2)
 
     # nearest neighbors
     query = emb1[dico[:, 0]]
@@ -116,7 +113,6 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
         matching = {}
         for i, src_id in enumerate(dico[:, 0].cpu().numpy()):
             matching[src_id] = min(matching.get(src_id, 0) + _matching[i], 1)
-        print("matching", matching)
         # evaluate precision@k
         precision_at_k = 100 * np.mean(list(matching.values()))
         logger.info("%i source words - Precision at k = %i: %f" %
