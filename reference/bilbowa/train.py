@@ -143,7 +143,7 @@ def main(argv):
 
     # strong pair iterator
     strong_batch_size = 1000
-    strong_negative_size = 10
+    strong_negative_size = 0
     strong_pair_iterator = strong_pairIterator(
         strong_id,
         mono0_unigram_table,
@@ -156,7 +156,7 @@ def main(argv):
 
     # weak pair iterator
     weak_batch_size = 3000
-    weak_negative_size = 10
+    weak_negative_size = 0
     weak_pair_iterator = weak_pairIterator(
         weak_id,
         mono0_unigram_table,
@@ -323,7 +323,7 @@ def main(argv):
             # logging.info('load_time = %s', dict_to_str(load_time))
             # logging.info('total_time = %s', dict_to_str(get_total_time()))
             # logging.info('hit_count = %s', dict_to_str(hit_count))
-            # logging.info('iter_info = %s', dict_to_str(iter_info))
+            logging.info('iter_info = %s', dict_to_str(iter_info))
             print(next_key)
             logging.info('last_loss = %s', dict_to_str(last_loss))
 
