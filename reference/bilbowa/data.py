@@ -262,7 +262,7 @@ class LazyIndexCorpus(object):
         self.eos_id = meta['eos_id']
 
         counts = np.load(filepath + '.counts.npz')
-        self.counts = counts['counts'][0:34000]
+        self.counts = counts['counts']
 
         self.ids_filepath = filepath + '.ids.txt'
 
