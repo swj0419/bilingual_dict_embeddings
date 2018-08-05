@@ -11,10 +11,9 @@ from absl import flags
 from absl import logging
 from tqdm import tqdm
 import numpy as np
+import pickle
 
 from keras.optimizers import Adam
-import tensorflow as tf
-
 
 # from data import Embedding, MultiLanguageEmbedding, \
 #     LazyIndexCorpus,  Word2vecIterator, BilbowaIterator
@@ -69,12 +68,11 @@ flags.DEFINE_boolean('encoder_target_no_gradient', True, '')
 flags.DEFINE_boolean('encoder_arch_version', 1, '')
 
 flags.DEFINE_float('logging_iterval', 5, '')
-flags.DEFINE_float('saving_iterval', 3600, '')
+flags.DEFINE_float('saving_iterval', 1000, '')
 
 
 def main(argv):
     del argv  # Unused.
-
     os.system('mkdir -p "%s"' % FLAGS.model_root)
 
     emb0 = Embedding(join(FLAGS.data_root, FLAGS.lang0_emb_file))
@@ -121,7 +119,8 @@ def main(argv):
         subsample=FLAGS.emb_subsample,
         window_size=FLAGS.word2vec_negative_size,
         negative_samples=FLAGS.word2vec_negative_size,
-        batch_size=FLAGS.word2vec_batch_size,
+        batch_size=FLAGS.word2vec_batch_size
+
     )
     mono1_iterator = Word2vecIterator(
         mono1,
@@ -129,7 +128,7 @@ def main(argv):
         subsample=FLAGS.emb_subsample,
         window_size=FLAGS.word2vec_negative_size,
         negative_samples=FLAGS.word2vec_negative_size,
-        batch_size=FLAGS.word2vec_batch_size,
+        batch_size=FLAGS.word2vec_batch_size
     )
     multi_iterator = BilbowaIterator(
         multi0,
@@ -138,7 +137,7 @@ def main(argv):
         mono1_unigram_table,
         subsample=FLAGS.emb_subsample,
         length=FLAGS.bilbowa_sent_length,
-        batch_size=FLAGS.bilbowa_batch_size,
+        batch_size=FLAGS.bilbowa_batch_size
     )
 
     # strong pair iterator
@@ -222,13 +221,14 @@ def main(argv):
     # weak
     keys = []
     if FLAGS.train_mono:
-        keys.append('mono0')
-        # keys.append('mono1')
+        # keys.append('mono0')
+        keys.append('mono1')
     if FLAGS.train_multi:
         keys.append('multi')
     keys.append('strong_pair')
     keys.append('weak_pair')
     keys = tuple(keys)
+    print("asd")
 
     def dict_to_str(d):
         return '{' + ', '.join(
@@ -263,8 +263,10 @@ def main(argv):
             loss = word2vec_model.train_on_batch(x=x, y=y)
             this_comp_time = time.time() - start_time
         elif next_key == 'mono1':
+            print("asd")
             start_time = time.time()
             (x, y), (epoch, instance) = next(mono1_iter)
+            print("asd")
             this_load_time = time.time() - start_time
             start_time = time.time()
             loss = word2vec_model.train_on_batch(x=x, y=y)
@@ -294,6 +296,7 @@ def main(argv):
             assert False
 
         assert not math.isnan(loss)
+
 
         comp_time[next_key] += this_comp_time
         load_time[next_key] += this_load_time
@@ -328,30 +331,52 @@ def main(argv):
             logging.info('last_loss = %s', dict_to_str(last_loss))
 
 
-        # if should_exit or (total_this_comp_time - last_eval_time >
-        #                    50):
-        #     last_eval_time = total_this_comp_time
-        #     # evaluate:
-        #     if (next_key == 'mono1' or next_key == 'mono0'):
-        #         pass
-        #     else:
-        #         word_emb_np = word_emb.get_weights()[0]
-        #         evaluator = Evaluator(word_emb_np[0:995000,:],word_emb_np[995000:,:], emb0.vocablower2id, emb1.vocablower2id)
-        #         results = evaluator.word_translation()
+        if should_exit or (total_this_comp_time - last_eval_time >
+                           5):
+            last_eval_time = total_this_comp_time
+            # evaluate:
+            if (next_key == 'mono1' or next_key == 'mono0'):
+                pass
+            else:
+                word_emb_np = word_emb.get_weights()[0]
+                evaluator = Evaluator(word_emb_np[0:39016,:],word_emb_np[39016:,:], emb0.vocablower2id, emb1.vocablower2id)
+                results = evaluator.word_translation()
+
 
         # save model
         if should_exit or (total_this_comp_time - last_saving_time >
                            FLAGS.saving_iterval):
             last_saving_time = total_this_comp_time
-            logging.info('Saving models started.')
-            tag = ''
-            word2vec_model.save(join(FLAGS.model_root, tag + 'word2vec_model'))
-            bilbowa_model.save(join(FLAGS.model_root, tag + 'bilbowa_model'))
-            word2vec_model_infer.save(
-                join(FLAGS.model_root, tag + 'word2vec_model_infer'))
-            bilbowa_model_infer.save(
-                join(FLAGS.model_root, tag + 'bilbowa_model_infer'))
-            logging.info('Saving models done.')
+            logging.info('Saving Embedding started.')
+            # tag = ''
+            # word2vec_model.save(join(FLAGS.model_root, tag + 'word2vec_model'))
+            # bilbowa_model.save(join(FLAGS.model_root, tag + 'bilbowa_model'))
+            # word2vec_model_infer.save(
+            #     join(FLAGS.model_root, tag + 'word2vec_model_infer'))
+            # bilbowa_model_infer.save(
+            #     join(FLAGS.model_root, tag + 'bilbowa_model_infer'))
+
+            # save embedding:
+            word_emb_np = word_emb.get_weights()[0]
+            emb0_save = word_emb_np[0:39016, :]
+            emb0_vocab = np.array(emb0.vocab)
+            with open('./save_embed/withctx.en-fr.en.50.1.txt', 'w') as f:
+                for name, vector in zip(emb0_vocab, emb0_save):
+                    f.write(name)
+                    f.write(' ')
+                    np.savetxt(f, vector, fmt='%.6f', newline=" ")
+                    f.write('\n')
+
+            emb1_save = word_emb_np[39016:, :]
+            emb1_vocab = np.array(emb1.vocab)
+            with open('./save_embed/withctx.en-fr.fr.50.1.txt', 'w') as f:
+                for name, vector in zip(emb1_vocab, emb1_save):
+                    f.write(name)
+                    f.write(' ')
+                    np.savetxt(f, vector, fmt='%.6f', newline=" ")
+                    f.write('\n')
+
+            logging.info('Saving Embedding done.')
 
         if should_exit:
             logging.info('Training target reached. Exit.')

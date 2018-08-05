@@ -9,7 +9,7 @@ from gensim.models import KeyedVectors
 en_stop = {}
 with open("../data/stop/stop_words_en.txt") as f:
     for line in f:
-        line = line.strip().lower()
+        line = line.strip()
         en_stop[line] = 1
 
 fr_stop = {}

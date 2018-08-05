@@ -23,7 +23,9 @@ class Embedding(object):
         self.emb = []
         self.vocab2id = dict()
         self.vocablower2id = dict()
+        self.id2vocablower = dict()
         self.stopwords = set()
+
 
         if emb_file:
             (
@@ -31,6 +33,8 @@ class Embedding(object):
                 self.emb,
                 self.vocab2id,
                 self.vocablower2id,
+                self.id2vocablower
+
             ) = self.load_emb(
                 emb_file, keep_emb=keep_emb)
 
@@ -70,8 +74,8 @@ class Embedding(object):
         logging.info('Embedding: Making mapping')
         vocab2id = {w: i for i, w in enumerate(vocab)}
         vocablower2id = {w.lower(): i for i, w in enumerate(vocab)}
-
-        return vocab, emb, vocab2id, vocablower2id
+        id2vocablower = {i: w.lower() for i, w in enumerate(vocab)}
+        return vocab, emb, vocab2id, vocablower2id, id2vocablower
 
     def load_stopwords(self, filepath):
         stop_words = []
@@ -258,7 +262,7 @@ class LazyIndexCorpus(object):
         self.eos_id = meta['eos_id']
 
         counts = np.load(filepath + '.counts.npz')
-        self.counts = counts['counts']
+        self.counts = counts['counts'][0:34000]
 
         self.ids_filepath = filepath + '.ids.txt'
 
@@ -312,7 +316,7 @@ class LazyIndexCorpus(object):
             'negative_sampler': negative_sampler,
         }
         if self.iter_async_allowed:
-            nb_proc = self.iter_async_nb_works ##????
+            nb_proc = self.iter_async_nb_works
             batche_size = self.iter_batch_size ##????
             look_ahead = self.iter_async_look_ahead ##?????/
 
@@ -427,7 +431,6 @@ class WalkerAlias(object):
 class UnigramTable(object):
     def __init__(self, counts, power=0.75):
         self.counts = np.array(counts)
-
         power = np.float32(power)
         p = np.array(counts, power.dtype)
         np.power(p, power, p)
@@ -456,6 +459,7 @@ class Word2vecIterator(object):
         self.negative_samples = negative_samples
         self.batch_size = batch_size
         self.epochs = epochs
+
 
     def fast2_iter(self, epochs=None):
         batch_size = self.batch_size
@@ -494,10 +498,8 @@ class Word2vecIterator(object):
 
                 K = len(positive_w_c_pair_list)
                 assert len(negative_c_list_as_array) == K * negative_samples
-
                 for i, (w, c) in enumerate(positive_w_c_pair_list):
                     instance += is_new_instance[i]
-
                     if c != -1:
                         words[pointer] = w
                         contexts[pointer] = c
@@ -510,15 +512,17 @@ class Word2vecIterator(object):
 
                     for j in range(i * negative_samples,
                                    (i + 1) * negative_samples):
-                        words[pointer] = w
-                        contexts[pointer] = negative_c_list_as_array[j]
-                        labels[pointer] = 0
-                        pointer += 1
 
-                        if pointer == batch_size - 1:
-                            yield (([words, contexts], labels), (epoch,
-                                                                 instance))
-                            pointer = 0
+                        if w != -1:
+                            words[pointer] = w
+                            contexts[pointer] = negative_c_list_as_array[j]
+                            labels[pointer] = 0
+                            pointer += 1
+
+                            if pointer == batch_size - 1:
+                                yield (([words, contexts], labels), (epoch,
+                                                                     instance))
+                                pointer = 0
 
             epoch += 1
             if epochs > -1 and epoch >= epochs:
@@ -676,7 +680,7 @@ class BilbowaIterator(object):
             subsample,
             length,
             batch_size,
-            epochs=-1,
+            epochs=-1
     ):
         self.lang0_index_corpus = lang0_index_corpus
         self.lang1_index_corpus = lang1_index_corpus
@@ -687,6 +691,8 @@ class BilbowaIterator(object):
         self.length = length
         self.batch_size = batch_size
         self.epochs = epochs
+
+
 
     def iter(self, epochs=None):
         length = self.length
@@ -766,6 +772,9 @@ def pair2id(strong_pairs, weak_pairs, emb):
     for pair in strong_pairs:
         f=emb.encode(pair[0], lang_id=1)
         e=emb.encode(pair[1], lang_id=0)
+        if(f == -1 or e == -1):
+            print("delete pair")
+            continue
         strong_id.add((f,e))
         l1_dict.setdefault(f, set()).add(e)
         l0_dict.setdefault(e, set()).add(f)
@@ -775,6 +784,9 @@ def pair2id(strong_pairs, weak_pairs, emb):
     for pair in weak_pairs:
         f=emb.encode(pair[0], lang_id=1)
         e=emb.encode(pair[1], lang_id=0)
+        if (f == -1 or e == -1):
+            print("delete pair")
+            continue
         weak_id.add((f,e))
         l1_dict.setdefault(f, set()).add(e)
         l0_dict.setdefault(e, set()).add(f)
@@ -787,8 +799,6 @@ def read_pair():
         for line in f:
             line = line.strip().split("\t")
             strong.add((line[0],line[1]))
-
-
 
     weak = set()
     with open("../../data/train/weak.txt") as f:
@@ -848,8 +858,6 @@ class strong_pairIterator(object):
 
     def strong_iter_example(self, epochs=None):
         epochs = self.epochs if epochs is None else epochs
-
-
         epoch, instance = 0, 0
         while True:
             for pair in self.strong_id:
