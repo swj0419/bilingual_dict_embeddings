@@ -221,7 +221,7 @@ def main(argv):
     # weak
     keys = []
     if FLAGS.train_mono:
-        # keys.append('mono0')
+        keys.append('mono0')
         keys.append('mono1')
     if FLAGS.train_multi:
         keys.append('multi')
@@ -263,10 +263,8 @@ def main(argv):
             loss = word2vec_model.train_on_batch(x=x, y=y)
             this_comp_time = time.time() - start_time
         elif next_key == 'mono1':
-            print("asd")
             start_time = time.time()
             (x, y), (epoch, instance) = next(mono1_iter)
-            print("asd")
             this_load_time = time.time() - start_time
             start_time = time.time()
             loss = word2vec_model.train_on_batch(x=x, y=y)
