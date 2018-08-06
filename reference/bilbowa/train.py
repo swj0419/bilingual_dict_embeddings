@@ -68,7 +68,7 @@ flags.DEFINE_boolean('encoder_target_no_gradient', True, '')
 flags.DEFINE_boolean('encoder_arch_version', 1, '')
 
 flags.DEFINE_float('logging_iterval', 5, '')
-flags.DEFINE_float('saving_iterval', 1000, '')
+flags.DEFINE_float('saving_iterval', 500, '')
 
 
 def main(argv):
@@ -225,10 +225,9 @@ def main(argv):
         keys.append('mono1')
     if FLAGS.train_multi:
         keys.append('multi')
-    keys.append('strong_pair')
-    keys.append('weak_pair')
+    # keys.append('strong_pair')
+    # keys.append('weak_pair')
     keys = tuple(keys)
-    print("asd")
 
     def dict_to_str(d):
         return '{' + ', '.join(
@@ -330,7 +329,7 @@ def main(argv):
 
 
         if should_exit or (total_this_comp_time - last_eval_time >
-                           5):
+                           100):
             last_eval_time = total_this_comp_time
             # evaluate:
             if (next_key == 'mono1' or next_key == 'mono0'):
