@@ -500,7 +500,7 @@ class Word2vecIterator(object):
         negative_sampler = self.unigram_table.negative_sampler
 
         DTYPE = np.int32
-        words = np.empty(shape=batch_size, dtype=DTYPE)
+        words = np.zeros(shape=batch_size, dtype=DTYPE)
         contexts = np.empty(shape=batch_size, dtype=DTYPE)
         labels = np.empty(shape=batch_size, dtype=DTYPE)
 
@@ -528,7 +528,7 @@ class Word2vecIterator(object):
                 for i, (w, c) in enumerate(positive_w_c_pair_list):
                     instance += is_new_instance[i]
                     if c != -1 and w < 87647:
-                        print(w)
+                        print("w_1", w)
                         words[pointer] = w
                         contexts[pointer] = c
                         labels[pointer] = 1
@@ -542,7 +542,7 @@ class Word2vecIterator(object):
                                    (i + 1) * negative_samples):
 
                         if w != -1 and w < 87647:
-                            print(w)
+                            print("w_2", w)
                             words[pointer] = w
                             contexts[pointer] = negative_c_list_as_array[j]
                             labels[pointer] = 0
