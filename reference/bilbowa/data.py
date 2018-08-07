@@ -421,7 +421,7 @@ class WalkerAlias(object):
             Returns a generated array with the given shape. the return value
             is a :class:`numpy.ndarray` object.
         """
-        return self.sample_gpu(shape)
+        return self.sample_cpu(shape)
 
     def sample_cpu(self, shape):
         ps = np.random.uniform(0, 1, shape)

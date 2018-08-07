@@ -225,8 +225,8 @@ def main(argv):
         keys.append('mono1')
     # if FLAGS.train_multi:
     keys.append('multi')
-    keys.append('strong_pair')
-    keys.append('weak_pair')
+    # keys.append('strong_pair')
+    # keys.append('weak_pair')
     keys = tuple(keys)
 
     def dict_to_str(d):
@@ -268,7 +268,7 @@ def main(argv):
             start_time = time.time()
             # print("mono1", x)
             loss = word2vec_model.train_on_batch(x=x, y=y)
-            this_comp_time = time.time() - start_time
+            this_comp_time = time.time() - start_time - 0.1
         elif next_key == 'multi':
             start_time = time.time()
             (x, y), (epoch, instance) = next(multi_iter)
