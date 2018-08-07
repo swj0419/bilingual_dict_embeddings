@@ -22,6 +22,12 @@ from data import *
 from model import get_model, word2vec_loss, bilbowa_loss, strong_pair_loss, weak_pair_loss
 sys.path.insert(0, '../eval')
 from evaluate import Evaluator
+import tensorflow as tf
+import keras
+
+config = tf.ConfigProto( device_count = {'GPU': 5 , 'CPU': 56} )
+sess = tf.Session(config=config)
+keras.backend.set_session(sess)
 
 
 FLAGS = flags.FLAGS

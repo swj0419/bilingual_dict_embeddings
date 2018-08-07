@@ -19,6 +19,8 @@ from absl import logging
 from chainer.backends import cuda
 
 
+
+
 class Embedding(object):
     def __init__(self, emb_file='', stopwords_file='', keep_emb=True):
         self.vocab = []

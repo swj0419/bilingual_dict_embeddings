@@ -5,11 +5,11 @@ from annoy import AnnoyIndex
 import random
 
 
-emb0 = Embedding("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/reference/bilbowa/save_embed/withctx.en-fr.en.50.1.txt")
-emb1 = Embedding("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/reference/bilbowa/save_embed/withctx.en-fr.fr.50.1.txt")
+# emb0 = Embedding("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/reference/bilbowa/save_embed/withctx.en-fr.en.50.1.txt")
+# emb1 = Embedding("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/reference/bilbowa/save_embed/withctx.en-fr.fr.50.1.txt")
 
-# emb0 = Embedding("./data_root/withctx.en-fr.en.50.1.txt")
-# emb1 = Embedding("./data_root/withctx.en-fr.fr.50.1.txt")
+emb0 = Embedding("./small_data_root/withctx.en-fr.en.50.1.txt")
+emb1 = Embedding("./small_data_root/withctx.en-fr.fr.50.1.txt")
 
 
 car_index = emb0.vocab2id["car"]
