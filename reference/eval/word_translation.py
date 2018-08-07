@@ -10,6 +10,7 @@ import io
 from logging import getLogger
 import numpy as np
 import torch
+from annoy import AnnoyIndex
 
 
 DIC_EVAL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.', 'data', 'crosslingual', 'dictionaries')
@@ -84,37 +85,59 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     """
     if dico_eval == 'default':
         path = os.path.join(DIC_EVAL_PATH, '%s-%s.5000-6500.txt' % (lang1, lang2))
-        print("dico_path", path)
-    else:
-        path = dico_eval
+    elif dico_eval == 'strong':
+        path = "../../data/train/strong_test.txt"
     dico = load_dictionary(path, word2id1, word2id2)
 
     # dico = dico.cuda() if emb1.is_cuda else dico
 
+
+
     assert dico[:, 0].max() < emb1.size(0)
     assert dico[:, 1].max() < emb2.size(0)
 
-    # normalize word embeddings
-    emb1 = emb1 / emb1.norm(2, 1, keepdim=True).expand_as(emb1)
-    emb2 = emb2 / emb2.norm(2, 1, keepdim=True).expand_as(emb2)
+    # # normalize word embeddings
+    # emb1 = emb1 / emb1.norm(2, 1, keepdim=True).expand_as(emb1)
+    # emb2 = emb2 / emb2.norm(2, 1, keepdim=True).expand_as(emb2)
+
+
+    emb1 = np.array(emb1)
+    emb2 = np.array(emb2)
+    query = np.array(emb1[dico[:, 0]])
+
 
     # nearest neighbors
-    query = emb1[dico[:, 0]]
-    scores = query.mm(emb2.transpose(0, 1))
+    # query = emb1[dico[:, 0]]
+    # scores = query.mm(emb2.transpose(0, 1))
+    # results = []
+    # top_matches = scores.topk(10, 1, True)[1]
+    # top_scores = scores.topk(10, 1, True)[0]
+
+    # annoy
+    f = 50
+    t = AnnoyIndex(f, metric="euclidean")  # euclidean,angular
+
+    i = 0
+    for emb in emb2:
+        t.add_item(i, emb)
+        i += 1
+    t.build(100)
+
+    result = []
+    for q in query:
+        top_k = t.get_nns_by_vector(q, 10)
+        result.append(top_k)
+    top_matches = torch.tensor(np.array(result))
+
     results = []
-    top_matches = scores.topk(10, 1, True)[1]
-    top_scores = scores.topk(10, 1, True)[0]
     for k in [1, 5, 10]:
         top_k_matches = top_matches[:, :k]
-        a = dico[:, 1][:, None]
-        b = dico[:, 1]
         _matching = (top_k_matches == dico[:, 1][:, None].expand_as(top_k_matches)).sum(1)
         # allow for multiple possible translations
         matching = {}
         for i, src_id in enumerate(dico[:, 0].cpu().numpy()):
             matching[src_id] = min(matching.get(src_id, 0) + _matching[i], 1)
         # evaluate precision@k
-        print("matching", list(matching.values()))
         precision_at_k = 100 * np.mean(list(matching.values()))
         logger.info("%i source words - Precision at k = %i: %f" %
                     (len(matching), k, precision_at_k))

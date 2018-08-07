@@ -223,10 +223,10 @@ def main(argv):
     if FLAGS.train_mono:
         keys.append('mono0')
         keys.append('mono1')
-    if FLAGS.train_multi:
-        keys.append('multi')
-    # keys.append('strong_pair')
-    # keys.append('weak_pair')
+    # if FLAGS.train_multi:
+        # keys.append('multi')
+    keys.append('strong_pair')
+    keys.append('weak_pair')
     keys = tuple(keys)
 
     def dict_to_str(d):
@@ -266,6 +266,7 @@ def main(argv):
             (x, y), (epoch, instance) = next(mono1_iter)
             this_load_time = time.time() - start_time
             start_time = time.time()
+            # print("mono1", x)
             loss = word2vec_model.train_on_batch(x=x, y=y)
             this_comp_time = time.time() - start_time
         elif next_key == 'multi':
@@ -329,14 +330,28 @@ def main(argv):
 
 
         if should_exit or (total_this_comp_time - last_eval_time >
-                           100):
+                           30):
             last_eval_time = total_this_comp_time
             # evaluate:
             if (next_key == 'mono1' or next_key == 'mono0'):
                 pass
             else:
                 word_emb_np = word_emb.get_weights()[0]
-                evaluator = Evaluator(word_emb_np[0:39016,:],word_emb_np[39016:,:], emb0.vocablower2id, emb1.vocablower2id)
+                embedding0 = word_emb_np[0:39016,:]
+                embedding1 = word_emb_np[39016:,:]
+                # muse test set
+                print("en-fr_test")
+                evaluator = Evaluator(embedding0,embedding1, emb0.vocablower2id, emb1.vocablower2id, "en", "fr", "default")
+                results = evaluator.word_translation()
+
+                # fr - en
+                print("fr-en_test")
+                evaluator = Evaluator(embedding1, embedding0, emb1.vocablower2id, emb0.vocablower2id, "fr", "en", "default")
+                results = evaluator.word_translation()
+
+                # strong weak pair set
+                print("strong_test")
+                evaluator = Evaluator(embedding1, embedding0, emb1.vocablower2id, emb0.vocablower2id, "fr", "en", "strong")
                 results = evaluator.word_translation()
 
 
