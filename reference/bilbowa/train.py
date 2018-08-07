@@ -263,6 +263,8 @@ def main(argv):
         if next_key == 'mono0':
             start_time = time.time()
             (x, y), (epoch, instance) = next(mono0_iter)
+            print("mono0", x)
+            print("mono0", y)
             this_load_time = time.time() - start_time
             start_time = time.time()
             loss = word2vec_model.train_on_batch(x=x, y=y)
