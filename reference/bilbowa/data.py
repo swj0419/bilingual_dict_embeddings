@@ -530,6 +530,7 @@ class Word2vecIterator(object):
                     if c != -1 & w < 87647:
                         words[pointer] = w
                         contexts[pointer] = c
+                        print("c", c)
                         labels[pointer] = 1
                         pointer += 1
                         if pointer == batch_size - 1:
@@ -543,6 +544,8 @@ class Word2vecIterator(object):
                         if w != -1 & w < 87647:
                             words[pointer] = w
                             contexts[pointer] = negative_c_list_as_array[j]
+                            print("neg", negative_c_list_as_array[j])
+                            
                             labels[pointer] = 0
                             pointer += 1
 
