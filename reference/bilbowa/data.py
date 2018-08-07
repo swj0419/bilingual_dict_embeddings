@@ -527,7 +527,7 @@ class Word2vecIterator(object):
                 assert len(negative_c_list_as_array) == K * negative_samples
                 for i, (w, c) in enumerate(positive_w_c_pair_list):
                     instance += is_new_instance[i]
-                    if c != -1 and w < 87647:
+                    if c != -1:
                         words[pointer] = w
                         contexts[pointer] = c
                         labels[pointer] = 1
@@ -540,7 +540,7 @@ class Word2vecIterator(object):
                     for j in range(i * negative_samples,
                                    (i + 1) * negative_samples):
 
-                        if w != -1 and w < 87647:
+                        if w != -1:
                             words[pointer] = w
                             contexts[pointer] = negative_c_list_as_array[j]
                             labels[pointer] = 0
