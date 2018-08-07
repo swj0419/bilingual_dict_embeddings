@@ -232,9 +232,9 @@ def main(argv):
         keys.append('mono0')
         keys.append('mono1')
     # if FLAGS.train_multi:
-    # keys.append('multi')
-    keys.append('strong_pair')
-    keys.append('weak_pair')
+    keys.append('multi')
+    # keys.append('strong_pair')
+    # keys.append('weak_pair')
     keys = tuple(keys)
 
     def dict_to_str(d):
@@ -383,9 +383,9 @@ def main(argv):
             emb0_save = word_emb_np[0:emb0_size, :]
             emb0_vocab = np.array(emb0.vocab)
             with open('./save_embed/random_withctx.en-fr.en.50.1.txt', 'w') as f:
-                f.write(emb0_size)
+                f.write(str(emb0_size))
                 f.write(' ')
-                f.write(50)
+                f.write("50")
                 f.write('\n')
                 for name, vector in zip(emb0_vocab, emb0_save):
                     f.write(name)
@@ -396,9 +396,9 @@ def main(argv):
             emb1_save = word_emb_np[emb0_size:, :]
             emb1_vocab = np.array(emb1.vocab)
             with open('./save_embed/random_withctx.en-fr.fr.50.1.txt', 'w',errors='surrogateescape') as f:
-                f.write(emb1_size)
+                f.write(str(emb1_size))
                 f.write(' ')
-                f.write(50)
+                f.write("50")
                 f.write('\n')
                 for name, vector in zip(emb1_vocab, emb1_save):
                     f.write(name)
