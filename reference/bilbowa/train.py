@@ -189,7 +189,7 @@ def main(argv):
         dim=FLAGS.emb_dim,
         length=FLAGS.bilbowa_sent_length,
         desc_length=FLAGS.encoder_desc_length,
-        word_emb_matrix=None,
+        word_emb_matrix=emb_matrix,
         context_emb_matrix=ctxemb_matrix,
     ) #emb_matrix
 
@@ -388,8 +388,8 @@ def main(argv):
                 f.write("50")
                 f.write('\n')
                 for name, vector in zip(emb0_vocab, emb0_save):
-                    f.write(name)
-                    f.write(' ')
+                    # f.write(name)
+                    # f.write(' ')
                     np.savetxt(f, vector, fmt='%.6f', newline=" ")
                     f.write('\n')
 
@@ -401,8 +401,8 @@ def main(argv):
                 f.write("50")
                 f.write('\n')
                 for name, vector in zip(emb1_vocab, emb1_save):
-                    f.write(name)
-                    f.write(' ')
+                    # f.write(name)
+                    # f.write(' ')
                     np.savetxt(f, vector, fmt='%.6f', newline=" ")
                     f.write('\n')
 
