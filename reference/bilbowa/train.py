@@ -82,7 +82,9 @@ def main(argv):
     os.system('mkdir -p "%s"' % FLAGS.model_root)
 
     emb0 = Embedding(join(FLAGS.data_root, FLAGS.lang0_emb_file))
+    emb0_size = len(emb0.vocab)
     emb1 = Embedding(join(FLAGS.data_root, FLAGS.lang1_emb_file))
+    emb1_size = len(emb1.vocab)
     emb = MultiLanguageEmbedding(emb0, emb1)
     vocab = emb.get_vocab()
     emb_matrix = emb.get_emb()
@@ -148,7 +150,7 @@ def main(argv):
 
     # strong pair iterator
     strong_batch_size = 1000
-    strong_negative_size = 5
+    strong_negative_size = 0
     strong_pair_iterator = strong_pairIterator(
         strong_id,
         mono0_unigram_table,
@@ -161,7 +163,7 @@ def main(argv):
 
     # weak pair iterator
     weak_batch_size = 3000
-    weak_negative_size = 5
+    weak_negative_size = 0
     weak_pair_iterator = weak_pairIterator(
         weak_id,
         mono0_unigram_table,
@@ -187,7 +189,7 @@ def main(argv):
         dim=FLAGS.emb_dim,
         length=FLAGS.bilbowa_sent_length,
         desc_length=FLAGS.encoder_desc_length,
-        word_emb_matrix=emb_matrix,
+        word_emb_matrix=None,
         context_emb_matrix=ctxemb_matrix,
     ) #emb_matrix
 
@@ -230,7 +232,7 @@ def main(argv):
         keys.append('mono0')
         keys.append('mono1')
     # if FLAGS.train_multi:
-    keys.append('multi')
+    # keys.append('multi')
     keys.append('strong_pair')
     keys.append('weak_pair')
     keys = tuple(keys)
@@ -263,8 +265,8 @@ def main(argv):
         if next_key == 'mono0':
             start_time = time.time()
             (x, y), (epoch, instance) = next(mono0_iter)
-            print("mono0", x)
-            print("mono0", y)
+            # print("mono0", x)
+            # print("mono0", y)
             this_load_time = time.time() - start_time
             start_time = time.time()
             loss = word2vec_model.train_on_batch(x=x, y=y)
@@ -274,7 +276,7 @@ def main(argv):
             (x, y), (epoch, instance) = next(mono1_iter)
             this_load_time = time.time() - start_time
             start_time = time.time()
-            print("mono1", x)
+            # print("mono1", x)
             loss = word2vec_model.train_on_batch(x=x, y=y)
             this_comp_time = time.time() - start_time - 0.1
         elif next_key == 'multi':
@@ -338,15 +340,15 @@ def main(argv):
 
 
         if should_exit or (total_this_comp_time - last_eval_time >
-                           30):
+                           50):
             last_eval_time = total_this_comp_time
             # evaluate:
             if (next_key == 'mono1' or next_key == 'mono0'):
                 pass
             else:
                 word_emb_np = word_emb.get_weights()[0]
-                embedding0 = word_emb_np[0:39016,:]
-                embedding1 = word_emb_np[39016:,:] # 995003, 39016
+                embedding0 = word_emb_np[0:emb0_size,:]
+                embedding1 = word_emb_np[emb0_size:,:] # 995003, 39016
                 # muse test set
                 print("en-fr_test")
                 evaluator = Evaluator(embedding0,embedding1, emb0.vocablower2id, emb1.vocablower2id, "en", "fr", "default")
@@ -378,18 +380,26 @@ def main(argv):
 
             # save embedding:
             word_emb_np = word_emb.get_weights()[0]
-            emb0_save = word_emb_np[0:39016, :]
+            emb0_save = word_emb_np[0:emb0_size, :]
             emb0_vocab = np.array(emb0.vocab)
             with open('./save_embed/random_withctx.en-fr.en.50.1.txt', 'w') as f:
+                f.write(emb0_size)
+                f.write(' ')
+                f.write(50)
+                f.write('\n')
                 for name, vector in zip(emb0_vocab, emb0_save):
                     f.write(name)
                     f.write(' ')
                     np.savetxt(f, vector, fmt='%.6f', newline=" ")
                     f.write('\n')
 
-            emb1_save = word_emb_np[39016:, :]
+            emb1_save = word_emb_np[emb0_size:, :]
             emb1_vocab = np.array(emb1.vocab)
             with open('./save_embed/random_withctx.en-fr.fr.50.1.txt', 'w',errors='surrogateescape') as f:
+                f.write(emb1_size)
+                f.write(' ')
+                f.write(50)
+                f.write('\n')
                 for name, vector in zip(emb1_vocab, emb1_save):
                     f.write(name)
                     f.write(' ')

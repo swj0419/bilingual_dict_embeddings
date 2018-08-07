@@ -12,13 +12,12 @@ emb1 = Embedding("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_
 # emb1 = Embedding("./data_root/withctx.en-fr.fr.50.1.txt")
 
 
-car_index = emb0.vocab2id["appetite"]
+car_index = emb0.vocab2id["car"]
 car_emb = emb0.emb[car_index]
 car_emb = np.array(car_emb)
 embedding0 = np.array(emb0.emb)
 
-
-voiture_index = emb1.vocab2id["appétit"]
+voiture_index = emb1.vocab2id["voiture"]
 voiture_emb = emb1.emb[voiture_index]
 voiture_emb = np.array(voiture_emb)
 embedding1 = np.array(emb1.emb)
