@@ -12,7 +12,7 @@ from absl import logging
 from tqdm import tqdm
 import numpy as np
 import pickle
-
+import datetime
 from keras.optimizers import Adam
 
 # from data import Embedding, MultiLanguageEmbedding, \
@@ -343,8 +343,8 @@ def main(argv):
                 pass
             else:
                 word_emb_np = word_emb.get_weights()[0]
-                embedding0 = word_emb_np[0:39016,:]
-                embedding1 = word_emb_np[39016:,:]
+                embedding0 = word_emb_np[0:995003,:]
+                embedding1 = word_emb_np[995003:,:]
                 # muse test set
                 print("en-fr_test")
                 evaluator = Evaluator(embedding0,embedding1, emb0.vocablower2id, emb1.vocablower2id, "en", "fr", "default")
@@ -376,18 +376,18 @@ def main(argv):
 
             # save embedding:
             word_emb_np = word_emb.get_weights()[0]
-            emb0_save = word_emb_np[0:39016, :]
+            emb0_save = word_emb_np[0:995003, :]
             emb0_vocab = np.array(emb0.vocab)
-            with open('./save_embed/withctx.en-fr.en.50.1.txt', 'w') as f:
+            with open('./save_embed/all_withctx.en-fr.en.50.1.txt', 'w') as f:
                 for name, vector in zip(emb0_vocab, emb0_save):
                     f.write(name)
                     f.write(' ')
                     np.savetxt(f, vector, fmt='%.6f', newline=" ")
                     f.write('\n')
 
-            emb1_save = word_emb_np[39016:, :]
+            emb1_save = word_emb_np[995003:, :]
             emb1_vocab = np.array(emb1.vocab)
-            with open('./save_embed/withctx.en-fr.fr.50.1.txt', 'w') as f:
+            with open('./save_embed/all_withctx.en-fr.fr.50.1.txt', 'w') as f:
                 for name, vector in zip(emb1_vocab, emb1_save):
                     f.write(name)
                     f.write(' ')

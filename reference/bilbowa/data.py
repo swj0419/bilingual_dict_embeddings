@@ -21,6 +21,7 @@ from chainer.backends import cuda
 
 
 
+
 class Embedding(object):
     def __init__(self, emb_file='', stopwords_file='', keep_emb=True):
         self.vocab = []
@@ -425,7 +426,7 @@ class WalkerAlias(object):
             is a :class:`numpy.ndarray` object.
         """
 
-        return self.sample_gpu(shape)
+        return self.sample_cpu(shape)
 
     def sample_cpu(self, shape):
         ps = np.random.uniform(0, 1, shape)
