@@ -272,7 +272,7 @@ def main(argv):
             (x, y), (epoch, instance) = next(mono1_iter)
             this_load_time = time.time() - start_time
             start_time = time.time()
-            # print("mono1", x)
+            print("mono1", x)
             loss = word2vec_model.train_on_batch(x=x, y=y)
             this_comp_time = time.time() - start_time - 0.1
         elif next_key == 'multi':
