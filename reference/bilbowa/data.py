@@ -528,6 +528,8 @@ class Word2vecIterator(object):
                 for i, (w, c) in enumerate(positive_w_c_pair_list):
                     instance += is_new_instance[i]
                     if c != -1:
+                        if (w > 87647):
+                            continue
                         words[pointer] = w
                         contexts[pointer] = c
                         labels[pointer] = 1

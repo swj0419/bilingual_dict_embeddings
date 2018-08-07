@@ -87,6 +87,7 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
         path = os.path.join(DIC_EVAL_PATH, '%s-%s.5000-6500.txt' % (lang1, lang2))
     elif dico_eval == 'strong':
         path = "../../data/train/strong_test.txt"
+    print(path)
     dico = load_dictionary(path, word2id1, word2id2)
 
     dico = dico.cuda() if emb1.is_cuda else dico
@@ -99,19 +100,20 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     # # normalize word embeddings
     # emb1 = emb1 / emb1.norm(2, 1, keepdim=True).expand_as(emb1)
     # emb2 = emb2 / emb2.norm(2, 1, keepdim=True).expand_as(emb2)
+    #
+    #
+    # # nearest neighbors
+    # query = emb1[dico[:, 0]]
+    # scores = query.mm(emb2.transpose(0, 1))
+    # results = []
+    # top_matches = scores.topk(10, 1, True)[1]
+    # top_scores = scores.topk(10, 1, True)[0]
 
 
     emb1 = np.array(emb1)
     emb2 = np.array(emb2)
     query = np.array(emb1[dico[:, 0]])
 
-
-    # nearest neighbors
-    # query = emb1[dico[:, 0]]
-    # scores = query.mm(emb2.transpose(0, 1))
-    # results = []
-    # top_matches = scores.topk(10, 1, True)[1]
-    # top_scores = scores.topk(10, 1, True)[0]
 
     # annoy
     f = 50
@@ -121,7 +123,7 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     for emb in emb2:
         t.add_item(i, emb)
         i += 1
-    t.build(100)
+    t.build(30)
 
     result = []
     for q in query:
