@@ -50,7 +50,7 @@ flags.DEFINE_integer('emb_dim', 50, '')
 flags.DEFINE_float('emb_subsample', 1e-5, '')
 flags.DEFINE_integer('word2vec_negative_size', 10, '')
 flags.DEFINE_integer('word2vec_batch_size', 100000, '')
-flags.DEFINE_float('word2vec_lr', 0.0001, '(Negative for default)')
+flags.DEFINE_float('word2vec_lr', 0.001, '(Negative for default)')
 flags.DEFINE_integer('bilbowa_sent_length', 50, '')
 flags.DEFINE_integer('bilbowa_batch_size', 100, '')
 flags.DEFINE_float('bilbowa_lr', 0.001, '(Negative for default)')
@@ -201,13 +201,13 @@ def main(argv):
             lr=FLAGS.bilbowa_lr, amsgrad=True)),
         loss=bilbowa_loss)
 
-    strong_pair_model_lr = 0.00001
+    strong_pair_model_lr = 0.001
     strong_pair_model.compile(
         optimizer=(Adam(amsgrad=True) if strong_pair_model_lr < 0 else Adam(
             lr=strong_pair_model_lr, amsgrad=True)),
         loss=strong_pair_loss)
 
-    weak_pair_model_lr = 0.00001
+    weak_pair_model_lr = 0.001
     weak_pair_model.compile(
         optimizer=(Adam(amsgrad=True) if weak_pair_model_lr < 0 else Adam(
             lr=weak_pair_model_lr, amsgrad=True)),
@@ -224,7 +224,7 @@ def main(argv):
         keys.append('mono0')
         keys.append('mono1')
     # if FLAGS.train_multi:
-        # keys.append('multi')
+    keys.append('multi')
     keys.append('strong_pair')
     keys.append('weak_pair')
     keys = tuple(keys)

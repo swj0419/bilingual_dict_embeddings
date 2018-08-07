@@ -5,20 +5,20 @@ from annoy import AnnoyIndex
 import random
 
 
-emb0 = Embedding("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/reference/bilbowa/save_embed/withctx.en-fr.en.50.1.txt")
-emb1 = Embedding("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/reference/bilbowa/save_embed/withctx.en-fr.fr.50.1.txt")
+emb0 = Embedding("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/reference/bilbowa/save_embed/1_withctx.en-fr.en.50.1.txt")
+emb1 = Embedding("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/reference/bilbowa/save_embed/1_withctx.en-fr.fr.50.1.txt")
 
 # emb0 = Embedding("./data_root/withctx.en-fr.en.50.1.txt")
 # emb1 = Embedding("./data_root/withctx.en-fr.fr.50.1.txt")
 
 
-car_index = emb0.vocab2id["appetite"]
+car_index = emb0.vocab2id["car"]
 car_emb = emb0.emb[car_index]
 car_emb = np.array(car_emb)
 embedding0 = np.array(emb0.emb)
 
 
-voiture_index = emb1.vocab2id["appétit"]
+voiture_index = emb1.vocab2id["voiture"]
 voiture_emb = emb1.emb[voiture_index]
 voiture_emb = np.array(voiture_emb)
 embedding1 = np.array(emb1.emb)
@@ -43,9 +43,21 @@ for emb in embedding0:
     t.add_item(i, emb)
     i += 1
 
-t.build(30)
+t.build(100)
 top_k = t.get_nns_by_vector(voiture_emb, 20)
 for k in top_k:
     print(emb0.id2vocablower[k])
 
 
+print("///////")
+f = 50
+t = AnnoyIndex(f, metric = "euclidean") #euclidean,angular
+i = 0
+for emb in embedding1:
+    t.add_item(i, emb)
+    i += 1
+
+t.build(100)
+top_k = t.get_nns_by_vector(car_emb, 20)
+for k in top_k:
+    print(emb1.id2vocablower[k])
