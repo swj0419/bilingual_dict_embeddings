@@ -15,6 +15,7 @@ import yaml
 from absl import app
 from absl import flags
 from absl import logging
+from chainer.backends import cuda
 
 
 class Embedding(object):
@@ -393,6 +394,7 @@ class WalkerAlias(object):
         il, ir = 0, 0
         pairs = list(zip(prob, range(len(probs))))
         pairs.sort()
+
         for prob, i in pairs:
             p = prob * len(probs)
             while p > 1 and ir < il:
@@ -418,7 +420,7 @@ class WalkerAlias(object):
             Returns a generated array with the given shape. the return value
             is a :class:`numpy.ndarray` object.
         """
-        return self.sample_cpu(shape)
+        return self.sample_gpu(shape)
 
     def sample_cpu(self, shape):
         ps = np.random.uniform(0, 1, shape)
@@ -427,6 +429,25 @@ class WalkerAlias(object):
         left_right = (self.threshold[index] < pb - index).astype(np.int32)
         return self.values[index * 2 + left_right]
 
+
+    def sample_gpu(self, shape):
+        ps = cuda.cupy.random.uniform(size=shape, dtype=numpy.float32)
+        vs = cuda.elementwise(
+            'T ps, raw T threshold , raw S values, int32 b',
+            'int32 vs',
+            '''
+            T pb = ps * b;
+            int index = __float2int_rd(pb);
+            // fill_uniform sometimes returns 1.0, so we need to check index
+            if (index >= b) {
+              index = 0;
+            }
+            int lr = threshold[index] < pb - index;
+            vs = values[index * 2 + lr];
+            ''',
+            'walker_alias_sample'
+        )(ps, self.threshold, self.values, len(self.threshold))
+        return vs
 
 class UnigramTable(object):
     def __init__(self, counts, power=0.75):
