@@ -89,7 +89,7 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
         path = "../../data/train/strong_test.txt"
     dico = load_dictionary(path, word2id1, word2id2)
 
-    # dico = dico.cuda() if emb1.is_cuda else dico
+    dico = dico.cuda() if emb1.is_cuda else dico
 
 
 
