@@ -150,7 +150,7 @@ def main(argv):
 
     # strong pair iterator
     strong_batch_size = 1000
-    strong_negative_size = 0
+    strong_negative_size = 10
     strong_pair_iterator = strong_pairIterator(
         strong_id,
         mono0_unigram_table,
@@ -163,7 +163,7 @@ def main(argv):
 
     # weak pair iterator
     weak_batch_size = 3000
-    weak_negative_size = 0
+    weak_negative_size = 5
     weak_pair_iterator = weak_pairIterator(
         weak_id,
         mono0_unigram_table,
@@ -340,7 +340,7 @@ def main(argv):
 
 
         if should_exit or (total_this_comp_time - last_eval_time >
-                           100):
+                           50):
             last_eval_time = total_this_comp_time
             # evaluate:
             if (next_key == 'mono1' or next_key == 'mono0'):
@@ -382,7 +382,7 @@ def main(argv):
             word_emb_np = word_emb.get_weights()[0]
             emb0_save = word_emb_np[0:emb0_size, :]
             emb0_vocab = np.array(emb0.vocab)
-            with open('./save_embed/random_withctx.en-fr.en.50.1.txt', 'w') as f:
+            with open('./save_embed/withctx.en-fr.en.50.1.txt', 'w') as f:
                 f.write(str(emb0_size))
                 f.write(' ')
                 f.write("50")
@@ -395,7 +395,7 @@ def main(argv):
 
             emb1_save = word_emb_np[emb0_size:, :]
             emb1_vocab = np.array(emb1.vocab)
-            with open('./save_embed/random_withctx.en-fr.fr.50.1.txt', 'w',errors='ignore') as f:
+            with open('./save_embed/withctx.en-fr.fr.50.1.txt', 'w',errors='ignore') as f:
                 f.write(str(emb1_size))
                 f.write(' ')
                 f.write("50")
