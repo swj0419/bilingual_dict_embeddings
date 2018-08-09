@@ -108,7 +108,7 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     # results = []
     # top_matches = scores.topk(10, 1, True)[1]
     # top_scores = scores.topk(10, 1, True)[0]
-    # results = []
+
 
 
     emb1 = np.array(emb1)
@@ -132,7 +132,7 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
         result.append(top_k)
     top_matches = torch.tensor(np.array(result))
 
-
+    results = []
     for k in [1, 5, 10]:
         top_k_matches = top_matches[:, :k]
         _matching = (top_k_matches == dico[:, 1][:, None].expand_as(top_k_matches)).sum(1)
