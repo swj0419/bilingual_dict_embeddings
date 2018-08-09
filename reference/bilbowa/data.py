@@ -904,7 +904,6 @@ class strong_pairIterator(object):
                         if(count < self.negative_samples/2):
                             neg_pair = (pair[0],id)
                             count += 1
-                            print(neg_pair)
                             yield neg_pair, -1, (epoch, instance)
 
                 for id in l1_negative_list: #fr
@@ -915,7 +914,6 @@ class strong_pairIterator(object):
                         if(count < self.negative_samples):
                             neg_pair = (id, pair[1])
                             count += 1
-                            print(neg_pair)
                             yield neg_pair, -1, (epoch, instance)
 
             epoch += 1
@@ -990,7 +988,6 @@ class weak_pairIterator(object):
                         if (count < self.negative_samples / 2):
                             neg_pair = (pair[0],id)
                             count += 1
-                            print(neg_pair)
                             yield neg_pair, -1, (epoch, instance)
                         else:
                             break
@@ -1003,7 +1000,6 @@ class weak_pairIterator(object):
                         if (count < self.negative_samples):
                             neg_pair = (id, pair[1])
                             count += 1
-                            print(neg_pair)
                             yield neg_pair, -1, (epoch, instance)
                         else:
                             break

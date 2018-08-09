@@ -211,7 +211,7 @@ def bilbowa_loss(y_true, y_pred):
 
 def strong_pair_loss(y_true, y_pred):
     # y_true is dummy here
-    return 0.7*K.log(1+K.exp(y_pred))
+    return 0.7*K.log(1+K.exp(-y_pred))
 
 def weak_pair_loss(y_true, y_pred):
     # y_true is dummy here
