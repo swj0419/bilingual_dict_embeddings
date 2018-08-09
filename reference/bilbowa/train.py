@@ -233,8 +233,8 @@ def main(argv):
         keys.append('mono1')
     # if FLAGS.train_multi:
     keys.append('multi')
-    # keys.append('strong_pair')
-    # keys.append('weak_pair')
+    keys.append('strong_pair')
+    keys.append('weak_pair')
     keys = tuple(keys)
 
     def dict_to_str(d):
