@@ -340,7 +340,7 @@ def main(argv):
 
 
         if should_exit or (total_this_comp_time - last_eval_time >
-                           30):
+                           1):
             last_eval_time = total_this_comp_time
             # evaluate:
             if (next_key == 'mono1' or next_key == 'mono0'):

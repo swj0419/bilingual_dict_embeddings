@@ -100,36 +100,36 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     # # normalize word embeddings
     # emb1 = emb1 / emb1.norm(2, 1, keepdim=True).expand_as(emb1)
     # emb2 = emb2 / emb2.norm(2, 1, keepdim=True).expand_as(emb2)
+
+
+    # nearest neighbors
+    query = emb1[dico[:, 0]]
+    scores = query.mm(emb2.transpose(0, 1))
+    results = []
+    top_matches = scores.topk(10, 1, True)[1]
+    top_scores = scores.topk(10, 1, True)[0]
+
+    #
+    # emb1 = np.array(emb1)
+    # emb2 = np.array(emb2)
+    # query = np.array(emb1[dico[:, 0]])
     #
     #
-    # # nearest neighbors
-    # query = emb1[dico[:, 0]]
-    # scores = query.mm(emb2.transpose(0, 1))
-    # results = []
-    # top_matches = scores.topk(10, 1, True)[1]
-    # top_scores = scores.topk(10, 1, True)[0]
+    # # annoy
+    # f = 50
+    # t = AnnoyIndex(f, metric="euclidean")  # euclidean,angular
+    #
+    # i = 0
+    # for emb in emb2:
+    #     t.add_item(i, emb)
+    #     i += 1
+    # t.build(30)
 
-
-    emb1 = np.array(emb1)
-    emb2 = np.array(emb2)
-    query = np.array(emb1[dico[:, 0]])
-
-
-    # annoy
-    f = 50
-    t = AnnoyIndex(f, metric="euclidean")  # euclidean,angular
-
-    i = 0
-    for emb in emb2:
-        t.add_item(i, emb)
-        i += 1
-    t.build(30)
-
-    result = []
-    for q in query:
-        top_k = t.get_nns_by_vector(q, 10)
-        result.append(top_k)
-    top_matches = torch.tensor(np.array(result))
+    # result = []
+    # for q in query:
+    #     top_k = t.get_nns_by_vector(q, 10)
+    #     result.append(top_k)
+    # top_matches = torch.tensor(np.array(result))
 
     results = []
     for k in [1, 5, 10]:
