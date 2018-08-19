@@ -27,65 +27,65 @@ with open('emb1_id2vocab.pickle', 'wb') as handle:
     pickle.dump(emb1_vocab, handle, protocol=pickle.HIGHEST_PROTOCOL)
 '''
 
-# read original id2vocab
-with open('./data_root/emb0_id2vocab.pickle', 'rb') as handle:
-    prev_emb0_id2vocab = pickle.load(handle)
-
-with open('./data_root/emb1_id2vocab.pickle', 'rb') as handle:
-    prev_emb1_id2vocab = pickle.load(handle)
-
-
-# store the embedding only appears in the strong weak pair
-English = set()
-French = set()
-
-with open("../../data/train/strong.txt") as f:
-    for line in f:
-        line = line.strip().split("\t")
-        French.add(line[0])
-        English.add(line[1])
-
-with open("../../data/train/weak.txt") as f:
-    for line in f:
-        line = line.strip().split("\t")
-        French.add(line[0])
-        English.add(line[1])
-
-
-
-# stop words
-en_stop = {}
-with open("./data_root/stop_words_en.txt") as f:
-    for line in f:
-        line = line.strip().lower()
-        en_stop[line] = 1
-
-fr_stop = {}
-with open("./data_root/stop_words_fr.txt") as f:
-    for line in f:
-        line = line.strip().lower()
-        fr_stop[line] = 1
-
-
-# English
-for x in range(50000-26101):
-    word = prev_emb0_id2vocab[x]
-    if(hasNumbers(word)):
-        continue
-    if(word in en_stop):
-        continue
-    English.add(word)
-
-for x in range(60000-24730):
-    word = prev_emb1_id2vocab[x]
-    if (hasNumbers(word)):
-        continue
-    if (word in fr_stop):
-        continue
-    French.add(word)
-
-print("English", len(English))
-print("French", len(French))
+# # read original id2vocab
+# with open('./data_root/emb0_id2vocab.pickle', 'rb') as handle:
+#     prev_emb0_id2vocab = pickle.load(handle)
+#
+# with open('./data_root/emb1_id2vocab.pickle', 'rb') as handle:
+#     prev_emb1_id2vocab = pickle.load(handle)
+#
+#
+# # store the embedding only appears in the strong weak pair
+# English = set()
+# French = set()
+#
+# with open("../../data/train/strong.txt") as f:
+#     for line in f:
+#         line = line.strip().split("\t")
+#         French.add(line[0])
+#         English.add(line[1])
+#
+# with open("../../data/train/weak.txt") as f:
+#     for line in f:
+#         line = line.strip().split("\t")
+#         French.add(line[0])
+#         English.add(line[1])
+#
+#
+#
+# # stop words
+# en_stop = {}
+# with open("./data_root/stop_words_en.txt") as f:
+#     for line in f:
+#         line = line.strip().lower()
+#         en_stop[line] = 1
+#
+# fr_stop = {}
+# with open("./data_root/stop_words_fr.txt") as f:
+#     for line in f:
+#         line = line.strip().lower()
+#         fr_stop[line] = 1
+#
+#
+# # English
+# for x in range(50000-26101):
+#     word = prev_emb0_id2vocab[x]
+#     if(hasNumbers(word)):
+#         continue
+#     if(word in en_stop):
+#         continue
+#     English.add(word)
+#
+# for x in range(60000-24730):
+#     word = prev_emb1_id2vocab[x]
+#     if (hasNumbers(word)):
+#         continue
+#     if (word in fr_stop):
+#         continue
+#     French.add(word)
+#
+# print("English", len(English))
+# print("French", len(French))
 
 
 ## multi_ids
@@ -173,11 +173,15 @@ print("French", len(French))
 # np.savez('./small_data_root/en_mono.counts.npz', counts = counts_0)
 
 
-counts_1 = np.zeros(48631)
-with open("./small_data_root/fr_mono.ids.txt", "r") as f:
-    for line in f:
-        lines = line.strip().split()
-        for w in lines:
-            counts_1[int(w)-39016] += 1
-np.savez('./small_data_root/fr_mono.counts.npz', counts=counts_1)
+# counts_1 = np.zeros(48631)
+# with open("./small_data_root/fr_mono.ids.txt", "r") as f:
+#     for line in f:
+#         lines = line.strip().split()
+#         for w in lines:
+#             counts_1[int(w)-39016] += 1
+# np.savez('./small_data_root/fr_mono.counts.npz', counts=counts_1)
 
+counts = np.load('./small_data_root/fr_mono.counts.npz')['counts']
+zeors = np.zeros(39016)
+counts = np.concatenate((zeors, counts), axis=0)
+np.savez('./small_data_root/fr_mono.counts.npz', counts=counts)

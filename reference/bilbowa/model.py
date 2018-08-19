@@ -54,7 +54,7 @@ def get_model(
             )
 
     word_emb = make_emb(word_emb_matrix, word_emb_trainable)
-    context_emb = make_emb(context_emb_matrix, context_emb_trainable) ## Why context embedding
+    context_emb = make_emb(context_emb_matrix, context_emb_trainable)
 
     # word2vec part. note that two langauges are dealt
     # in the same word2vec func.
@@ -93,16 +93,17 @@ def get_model(
 
     encode = Lambda(encode_function)
 
-    sent_0_encoded = encode([sent_0_embedded, mask_0_input]) ###why mask??
+    sent_0_encoded = encode([sent_0_embedded, mask_0_input])
     sent_1_encoded = encode([sent_1_embedded, mask_1_input])
 
     diff_sent_encoded = Subtract()([sent_0_encoded, sent_1_encoded])
 
-    def scale_diff_function(x):  ###why mask??
+    def scale_diff_function(x):
         diff_sent_encoded, mask_0, mask_1 = x
         t = (K.sum(mask_0, axis=-1, keepdims=True) + K.sum(
             mask_1, axis=-1, keepdims=True)) * 0.5
         return diff_sent_encoded * t
+        # return diff_sent_encoded
 
     diff_sent_encoded = Lambda(scale_diff_function)([
         diff_sent_encoded,
@@ -122,64 +123,45 @@ def get_model(
     # strong Pair model
     l0_s = Input(shape=(1,))
     l1_s = Input(shape=(1,))
-    label_s = Input(shape=(1,))
 
 
     l0_s_embedded = word_emb(l0_s)
     l1_s_embedded = word_emb(l1_s)
 
-    # l2_s = K.sqrt(K.sum(K.square(l0_s_embedded - l1_s_embedded), axis=-1, keepdims=True))
-    # print("l2", l2_s)
-    # l2_s = Flatten()(l2_s)
-    # print("l2", l2_s)
-    # l2_s = Multiply()([l2_s, label])
-    # print("l2", l2_s)
-    def l2_dist(x):
-        y_true, y_pred, label = x
-        l2 = K.sum(K.square(y_true - y_pred), axis=-1, keepdims=True)
-        l2 = Flatten()(l2)
-        l2 = Multiply()([l2, label])
-        print("l2",l2)
 
+    def l2_dist(x):
+        y_true, y_pred = x
+        l2 = K.mean(K.square(y_true - y_pred), axis=-1, keepdims=True)
+        l2 = Flatten()(l2)
         return l2
 
     l2_dist_s_encode = Lambda(l2_dist)([
         l0_s_embedded,
         l1_s_embedded,
-        label_s
     ])
 
-    print("l2_dist_encode", l2_dist_s_encode)
-    strong_pair_model = Model(inputs=[l0_s, l1_s, label_s], outputs=l2_dist_s_encode)
+    strong_pair_model = Model(inputs=[l0_s, l1_s], outputs=l2_dist_s_encode)
+
 
     # infer
     strong_pair_model_infer = Model(
         inputs=[l0_s], outputs=Flatten()(l0_s_embedded))
 
 
-
-
     # weak pair mode
     l0_w = Input(shape=(1,))
     l1_w = Input(shape=(1,))
-    label_w = Input(shape=(1,))
 
     l0_w_embedded = word_emb(l0_w)
     l1_w_embedded = word_emb(l1_w)
 
-
-    # weak_output = Dot(axes=-1)([l0_w_embedded, l1_w_embedded])
-    # weak_output = Flatten()(weak_output)
-    # weak_output = Multiply()([weak_output, label])
-
     l2_dist_w_encode = Lambda(l2_dist)([
         l0_w_embedded,
         l1_w_embedded,
-        label_w
     ])
 
 
-    weak_pair_model = Model(inputs=[l0_w, l1_w, label_w], outputs=l2_dist_w_encode)
+    weak_pair_model = Model(inputs=[l0_w, l1_w], outputs=l2_dist_w_encode)
 
     # infer
     weak_pair_model_infer = Model(
@@ -207,13 +189,12 @@ def word2vec_loss(y_true, y_pred):
 def bilbowa_loss(y_true, y_pred):
     # y_true is dummy here
     diff_sent_encoded = y_pred
-    return K.mean(K.square(diff_sent_encoded), axis=-1) ###y_pred
+    return K.mean(K.square(diff_sent_encoded), axis=-1)
 
 def strong_pair_loss(y_true, y_pred):
-    # y_true is dummy here
-    return 0.7*K.log(1+K.exp(-y_pred))
+    return 0.7 * (-1) * y_true * K.log(K.exp(-y_pred))
 
 def weak_pair_loss(y_true, y_pred):
-    # y_true is dummy here
-    return 0.3*K.log(1+K.exp(y_pred))
+    return 0.3 * (-1) * y_true * K.log(K.exp(-y_pred))
+
 

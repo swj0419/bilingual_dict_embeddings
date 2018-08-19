@@ -25,7 +25,5 @@ class Evaluator(object):
             self.tgt_lang, self.tgt_dico, tgt_emb,
             dico_eval=self.dico_eval)
 
-
-
         return results
 

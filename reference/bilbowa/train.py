@@ -12,6 +12,7 @@ from absl import logging
 from tqdm import tqdm
 import numpy as np
 import pickle
+import datetime
 
 from keras.optimizers import Adam
 
@@ -59,7 +60,7 @@ flags.DEFINE_integer('word2vec_batch_size', 100000, '')
 flags.DEFINE_float('word2vec_lr', 0.001, '(Negative for default)')
 flags.DEFINE_integer('bilbowa_sent_length', 50, '')
 flags.DEFINE_integer('bilbowa_batch_size', 100, '')
-flags.DEFINE_float('bilbowa_lr', 0.001, '(Negative for default)')
+flags.DEFINE_float('bilbowa_lr', 0.0001, '(Negative for default)')
 flags.DEFINE_integer('encoder_desc_length', 15, '')
 flags.DEFINE_integer('encoder_batch_size', 50, '')
 flags.DEFINE_float('encoder_lr', 0.0002, '')
@@ -79,7 +80,9 @@ flags.DEFINE_float('saving_iterval', 500, '')
 
 def main(argv):
     del argv  # Unused.
+
     os.system('mkdir -p "%s"' % FLAGS.model_root)
+
 
     emb0 = Embedding(join(FLAGS.data_root, FLAGS.lang0_emb_file))
     emb0_size = len(emb0.vocab)
@@ -130,6 +133,7 @@ def main(argv):
         batch_size=FLAGS.word2vec_batch_size
 
     )
+
     mono1_iterator = Word2vecIterator(
         mono1,
         mono1_unigram_table,
@@ -138,6 +142,7 @@ def main(argv):
         negative_samples=FLAGS.word2vec_negative_size,
         batch_size=FLAGS.word2vec_batch_size
     )
+
     multi_iterator = BilbowaIterator(
         multi0,
         multi1,
@@ -148,9 +153,11 @@ def main(argv):
         batch_size=FLAGS.bilbowa_batch_size
     )
 
+    multi_iterator.logging_debug(emb)
+
     # strong pair iterator
     strong_batch_size = 1000
-    strong_negative_size = 10
+    strong_negative_size = 0
     strong_pair_iterator = strong_pairIterator(
         strong_id,
         mono0_unigram_table,
@@ -163,7 +170,7 @@ def main(argv):
 
     # weak pair iterator
     weak_batch_size = 3000
-    weak_negative_size = 10
+    weak_negative_size = 0
     weak_pair_iterator = weak_pairIterator(
         weak_id,
         mono0_unigram_table,
@@ -183,15 +190,16 @@ def main(argv):
         bilbowa_model_infer,
         strong_pair_model_infer,
         weak_pair_model_infer,
-        word_emb
+        word_emb,
+
     ) = get_model(
         nb_word=len(vocab),
         dim=FLAGS.emb_dim,
         length=FLAGS.bilbowa_sent_length,
         desc_length=FLAGS.encoder_desc_length,
-        word_emb_matrix=emb_matrix,
-        context_emb_matrix=ctxemb_matrix,
-    ) #emb_matrix
+        word_emb_matrix=None,
+        context_emb_matrix=None
+    ) #emb_matrix, ctxemb_matrix
 
     logging.info('word2vec_model.summary()')
     word2vec_model.summary()
@@ -226,20 +234,65 @@ def main(argv):
     multi_iter = multi_iterator.iter()
     strong_iter = strong_pair_iterator.strong_iter()
     weak_iter = weak_pair_iterator.weak_iter()
+
     # weak
     keys = []
-    if FLAGS.train_mono:
-        keys.append('mono0')
-        keys.append('mono1')
+    # if FLAGS.train_mono:
+    keys.append('mono0')
+    keys.append('mono1')
     # if FLAGS.train_multi:
-    keys.append('multi')
+    # keys.append('multi')
     keys.append('strong_pair')
     keys.append('weak_pair')
     keys = tuple(keys)
 
+
+    '''
+    Save Model
+    '''
+    def get_model_identifier(keys, dim, strong_negative_size, weak_negative_size):
+        prefix = "dim" + str(dim) + "_"
+        for i in keys:
+            if(i == "mono0"):
+                prefix += "mono_"
+            elif(i == "multi"):
+                prefix += "multi_"
+            elif(i == "strong_pair"):
+                prefix = prefix + "s" + str(strong_negative_size) + "_"
+            elif (i == "weak_pair"):
+                prefix = prefix + "w" + str(weak_negative_size) + "_"
+
+        now = datetime.datetime.now()
+        date = '%02d%02d' % (now.month, now.day)  # two digits month/day
+        identifier = date + "_" + prefix
+        # identifier = '_'.join([prefix, date, str(lr), str(dim), str(batch_size), str(p_neg)])
+        return identifier
+
+    save_dir = "./sav_model"
+    identifier = get_model_identifier(keys, FLAGS.emb_dim, strong_negative_size, weak_negative_size)
+    save_dir = join(save_dir, identifier)
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    def save_emb_obj(word_emb_np, save_dir):
+        emb0_save = word_emb_np[0:emb0_size, :]
+        emb1_save = word_emb_np[emb0_size:, :]
+        emb0.emb = emb0_save
+        emb1.emb = emb1_save
+        dir0 = join(save_dir, "emb0.pickle")
+        dir1 = join(save_dir, "emb1.pickle")
+        with open(dir0, "wb") as file_:
+            pickle.dump(emb0, file_, -1)
+        with open(dir1, "wb") as file_:
+            pickle.dump(emb1, file_, -1)
+
+    '''
+    Train Model
+    '''
     def dict_to_str(d):
         return '{' + ', '.join(
             ['%s: %s' % (key, d[key]) for key in sorted(d.keys())]) + '}'
+
 
     comp_time = {key: 0.0 for key in keys}
     load_time = {key: 0.0 for key in keys}
@@ -255,6 +308,7 @@ def main(argv):
     loss_decay = 0.6
     last_saving_time = 0.
     last_eval_time = 0
+
 
     while True:
         total_time = get_total_time()
@@ -274,9 +328,9 @@ def main(argv):
         elif next_key == 'mono1':
             start_time = time.time()
             (x, y), (epoch, instance) = next(mono1_iter)
+            # print("x", x)
             this_load_time = time.time() - start_time
             start_time = time.time()
-            # print("mono1", x)
             loss = word2vec_model.train_on_batch(x=x, y=y)
             this_comp_time = time.time() - start_time
         elif next_key == 'multi':
@@ -286,12 +340,16 @@ def main(argv):
             start_time = time.time()
             loss = bilbowa_model.train_on_batch(x=x, y=y)
             this_comp_time = time.time() - start_time
+
+
         elif next_key == 'strong_pair':
             start_time = time.time()
             (x, y), (epoch, instance) = next(strong_iter)
             this_load_time = time.time() - start_time
             start_time = time.time()
             loss = strong_pair_model.train_on_batch(x=x, y=y)
+            # print("L2 DIST", strong_pair_model.predict(x)[1])
+
             this_comp_time = time.time() - start_time
         elif next_key == 'weak_pair':
             start_time = time.time()
@@ -323,10 +381,11 @@ def main(argv):
         if FLAGS.max_multi_epochs > -1:
             if (iter_info['multi'][0] >= FLAGS.max_multi_epochs):
                 should_exit = True
-
         total_this_comp_time = time.time() - global_start_time
+
+
         if should_exit or (total_this_comp_time - last_logging_time >
-                           FLAGS.logging_iterval):
+                           10): # FLAGS.logging_iterval
             last_logging_time = total_this_comp_time
             # logging.info('Stats so far')
             # logging.info('next_key = %s', next_key)
@@ -335,8 +394,13 @@ def main(argv):
             # logging.info('total_time = %s', dict_to_str(get_total_time()))
             # logging.info('hit_count = %s', dict_to_str(hit_count))
             logging.info('iter_info = %s', dict_to_str(iter_info))
-            print(next_key)
             logging.info('last_loss = %s', dict_to_str(last_loss))
+            logname = join(save_dir, "loss.txt")
+            with open(logname, "a") as f:
+                f.write(dict_to_str(iter_info))
+                f.write("\n")
+                f.write(dict_to_str(last_loss))
+                f.write("\n")
 
 
         if should_exit or (total_this_comp_time - last_eval_time >
@@ -352,60 +416,45 @@ def main(argv):
                 # muse test set
                 print("en-fr_test")
                 evaluator = Evaluator(embedding0,embedding1, emb0.vocablower2id, emb1.vocablower2id, "en", "fr", "default")
-                results = evaluator.word_translation()
+                results = evaluator.word_translation()[0]
+                logname = join(save_dir, "word_translation.txt")
+                with open(logname, "a") as f:
+                    f.write("en-fr_test: ")
+                    f.write(str(results))
+                    f.write("\n")
 
                 # fr - en
                 print("fr-en_test")
                 evaluator = Evaluator(embedding1, embedding0, emb1.vocablower2id, emb0.vocablower2id, "fr", "en", "default")
-                results = evaluator.word_translation()
+                results = evaluator.word_translation()[0]
+                with open(logname, "a") as f:
+                    f.write("fr-en_test: ")
+                    f.write(str(results))
+                    f.write("\n")
 
                 # strong weak pair set
                 print("strong_test")
                 evaluator = Evaluator(embedding1, embedding0, emb1.vocablower2id, emb0.vocablower2id, "fr", "en", "strong")
-                results = evaluator.word_translation()
+                results = evaluator.word_translation()[0]
+                with open(logname, "a") as f:
+                    f.write("strong_test: ")
+                    f.write(str(results))
+                    f.write("\n")
+                    f.write("-----------------------------------------------------------")
+                    f.write("\n")
+
 
 
         # save model
         if should_exit or (total_this_comp_time - last_saving_time >
-                           FLAGS.saving_iterval):
+                           100): #FLAGS.saving_iterval
             last_saving_time = total_this_comp_time
             logging.info('Saving Embedding started.')
-            # tag = ''
-            # word2vec_model.save(join(FLAGS.model_root, tag + 'word2vec_model'))
-            # bilbowa_model.save(join(FLAGS.model_root, tag + 'bilbowa_model'))
-            # word2vec_model_infer.save(
-            #     join(FLAGS.model_root, tag + 'word2vec_model_infer'))
-            # bilbowa_model_infer.save(
-            #     join(FLAGS.model_root, tag + 'bilbowa_model_infer'))
 
             # save embedding:
-            # word_emb_np = word_emb.get_weights()[0]
-            # emb0_save = word_emb_np[0:emb0_size, :]
-            # emb0_vocab = np.array(emb0.vocab)
-            # with open('./save_embed/withctx.en-fr.en.50.1.txt', 'w') as f:
-            #     f.write(str(emb0_size))
-            #     f.write(' ')
-            #     f.write("50")
-            #     f.write('\n')
-            #     for name, vector in zip(emb0_vocab, emb0_save):
-            #         f.write(name)
-            #         f.write(' ')
-            #         np.savetxt(f, vector, fmt='%.6f', newline=" ")
-            #         f.write('\n')
-            #
-            # emb1_save = word_emb_np[emb0_size:, :]
-            # emb1_vocab = np.array(emb1.vocab)
-            # with open('./save_embed/withctx.en-fr.fr.50.1.txt', 'w',errors='ignore') as f:
-            #     f.write(str(emb1_size))
-            #     f.write(' ')
-            #     f.write("50")
-            #     f.write('\n')
-            #     for name, vector in zip(emb1_vocab, emb1_save):
-            #         f.write(name)
-            #         f.write(' ')
-            #         np.savetxt(f, vector, fmt='%.6f', newline=" ")
-            #         f.write('\n')
-
+            print('The model will be stored in: ', save_dir)
+            word_emb_np = word_emb.get_weights()[0]
+            save_emb_obj(word_emb_np, save_dir)
             logging.info('Saving Embedding done.')
 
         if should_exit:

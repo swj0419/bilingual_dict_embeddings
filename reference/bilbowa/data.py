@@ -322,8 +322,8 @@ class LazyIndexCorpus(object):
         }
         if self.iter_async_allowed:
             nb_proc = self.iter_async_nb_works
-            batche_size = self.iter_batch_size ##????
-            look_ahead = self.iter_async_look_ahead ##?????/
+            batche_size = self.iter_batch_size
+            look_ahead = self.iter_async_look_ahead
 
             qin = Queue()
             qout = Queue()
@@ -501,7 +501,7 @@ class Word2vecIterator(object):
 
         DTYPE = np.int32
         words = np.zeros(shape=batch_size, dtype=DTYPE)
-        contexts = np.empty(shape=batch_size, dtype=DTYPE)
+        contexts = np.zeros(shape=batch_size, dtype=DTYPE)
         labels = np.empty(shape=batch_size, dtype=DTYPE)
 
         pointer = 0
@@ -517,12 +517,12 @@ class Word2vecIterator(object):
                     negative_samples=negative_samples,
                     negative_sampler=negative_sampler,
             ):
+
                 (
                     positive_w_c_pair_list,
                     is_new_instance,
                     negative_c_list_as_array,
                 ) = batched_result
-
                 K = len(positive_w_c_pair_list)
                 assert len(negative_c_list_as_array) == K * negative_samples
                 for i, (w, c) in enumerate(positive_w_c_pair_list):
@@ -747,6 +747,11 @@ class BilbowaIterator(object):
                     sent_1[i, :length_1] = row_1
                     mask_0[i, :length_0] = 1.0
                     mask_1[i, :length_1] = 1.0
+                    # print("sent_0", sent_0[i, :length_0])
+                    # print("sent_1",sent_1[i, :length_1])
+                    # print("mask_0", mask_0[i, :length_0])
+                # print(sent_0)
+                # print(mask_0)
                 yield ([sent_0, mask_0, sent_1, mask_1], y), (epoch, instance)
         except StopIteration:
             pass
@@ -775,7 +780,7 @@ class BilbowaIterator(object):
             if epochs > -1 and epoch >= epochs:
                 break
 
-    def logging_debug(self, emb, nb_example=20):
+    def logging_debug(self, emb, nb_example=500):
         logging.info('logging bilbowa iterator')
         vocab = emb.get_vocab()
         for i, blob in enumerate(self.iter_example()):
@@ -857,7 +862,6 @@ class strong_pairIterator(object):
         self.l1_dict = l1_dict
 
 
-
     def strong_iter(self, epochs=None):
         batch_size = self.batch_size
         it = self.strong_iter_example(epochs=epochs)
@@ -865,19 +869,21 @@ class strong_pairIterator(object):
 
         l0_s_words = np.zeros(shape=batch_size, dtype=np.int32)
         l1_s_words = np.zeros(shape=batch_size, dtype=np.int32)
-        labels = np.zeros(shape=batch_size, dtype=np.int32)
         y = np.empty(shape=batch_size, dtype=np.float32)  # dummy
 
         try:
             while True:
-                y[:] = 0
                 for i in range(batch_size):
-                    pair, label, (epoch, instance),  = next(it)
+                    pair, label, (epoch, instance) = next(it)
                     l0_s_words[i] = pair[0]
                     l1_s_words[i] = pair[1]
-                    labels[i] = label
+                    if(label == -1):
+                        y[i] = label * 0.01
+                    else:
+                        y[i] = label
+                    # print(l0_s_words[i], l1_s_words[i], label)
 
-                yield ([l0_s_words,l1_s_words, labels],y), (epoch, instance)
+                yield ([l0_s_words, l1_s_words], y), (epoch, instance)
 
         except StopIteration:
             pass
@@ -889,17 +895,15 @@ class strong_pairIterator(object):
         while True:
             for pair in self.strong_id:
                 instance += 1
-
                 yield pair, 1, (epoch, instance)
 
                 l0_negative_list = self.l0_unigram_table.negative_sampler.sample(int(self.negative_samples/2)+3)
                 l1_negative_list = self.l1_unigram_table.negative_sampler.sample(int(self.negative_samples/2)+3)
-
                 count = 0
                 for id in l0_negative_list: ##l0 = en
                     if(id in self.l1_dict[pair[0]]): ##l1 = fr
-                        print("CORRUPT")
-                        break
+                        # print("CORRUPT")
+                        continue
                     else:
                         if(count < self.negative_samples/2):
                             neg_pair = (pair[0],id)
@@ -908,8 +912,8 @@ class strong_pairIterator(object):
 
                 for id in l1_negative_list: #fr
                     if(id in self.l0_dict[pair[1]]):
-                        print("CORRUPT")
-                        break
+                        # print("CORRUPT")
+                        continue
                     else:
                         if(count < self.negative_samples):
                             neg_pair = (id, pair[1])
@@ -959,9 +963,12 @@ class weak_pairIterator(object):
                     pair, label, (epoch, instance) = next(it)
                     l0_w_words[i] = pair[0]
                     l1_w_words[i] = pair[1]
-                    labels[i] = label
+                    if (label == -1):
+                        y[i] = label * 0.01
+                    else:
+                        y[i] = label
 
-                yield ([l0_w_words,l1_w_words,labels],y), (epoch, instance)
+                yield ([l0_w_words, l1_w_words], y), (epoch, instance)
 
         except StopIteration:
             pass
@@ -979,7 +986,6 @@ class weak_pairIterator(object):
 
                 l0_negative_list = self.l0_unigram_table.negative_sampler.sample(int(self.negative_samples / 2) + 3)
                 l1_negative_list = self.l1_unigram_table.negative_sampler.sample(int(self.negative_samples / 2) + 3)
-
                 count = 0
                 for id in l0_negative_list:
                     if (id in self.l1_dict[pair[0]]):
@@ -994,7 +1000,6 @@ class weak_pairIterator(object):
 
                 for id in l1_negative_list:
                     if (id in self.l0_dict[pair[1]]):
-
                         continue
                     else:
                         if (count < self.negative_samples):
