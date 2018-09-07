@@ -15,9 +15,19 @@ import pickle
 import datetime
 
 from keras.optimizers import Adam
+from keras import backend as K
+import tensorflow as tf
+import keras.backend.tensorflow_backend as KTF
 
-# from data import Embedding, MultiLanguageEmbedding, \
-#     LazyIndexCorpus,  Word2vecIterator, BilbowaIterator
+
+from data import Embedding, MultiLanguageEmbedding, \
+    LazyIndexCorpus,  Word2vecIterator, BilbowaIterator
+import os
+
+# config = tf.ConfigProto()
+# session = tf.Session(config=config)
+# KTF.set_session(session)
+
 
 from data import *
 from model import get_model, word2vec_loss, bilbowa_loss, strong_pair_loss, weak_pair_loss
@@ -26,9 +36,6 @@ from evaluate import Evaluator
 import tensorflow as tf
 import keras
 
-config = tf.ConfigProto( device_count = {'GPU': 5 , 'CPU': 56} )
-sess = tf.Session(config=config)
-keras.backend.set_session(sess)
 
 
 FLAGS = flags.FLAGS
@@ -57,13 +64,13 @@ flags.DEFINE_integer('emb_dim', 50, '')
 flags.DEFINE_float('emb_subsample', 1e-5, '')
 flags.DEFINE_integer('word2vec_negative_size', 10, '')
 flags.DEFINE_integer('word2vec_batch_size', 100000, '')
-flags.DEFINE_float('word2vec_lr', 0.001, '(Negative for default)')
-flags.DEFINE_integer('bilbowa_sent_length', 50, '')
+flags.DEFINE_float('word2vec_lr', 0.00001, '(Negative for default)')
+flags.DEFINE_integer('bilbowa_sent_length', 60, '')
 flags.DEFINE_integer('bilbowa_batch_size', 100, '')
-flags.DEFINE_float('bilbowa_lr', 0.0001, '(Negative for default)')
+flags.DEFINE_float('bilbowa_lr', 0.00001, '(Negative for default)')
 flags.DEFINE_integer('encoder_desc_length', 15, '')
-flags.DEFINE_integer('encoder_batch_size', 50, '')
-flags.DEFINE_float('encoder_lr', 0.0002, '')
+flags.DEFINE_integer('encoder_batch_size', 20, '')
+flags.DEFINE_float('encoder_lr', 0.02, '')
 
 flags.DEFINE_boolean('train_mono', True, '')
 flags.DEFINE_boolean('train_multi', True, '')
@@ -80,28 +87,30 @@ flags.DEFINE_float('saving_iterval', 500, '')
 
 def main(argv):
     del argv  # Unused.
-
     os.system('mkdir -p "%s"' % FLAGS.model_root)
-
-
-    emb0 = Embedding(join(FLAGS.data_root, FLAGS.lang0_emb_file))
+    emb0 = pickle.load(open("./sav_model/pretrained/emb0.pickle", "rb", -1))
+    # emb0 = Embedding(join(FLAGS.data_root, FLAGS.lang0_emb_file))
     emb0_size = len(emb0.vocab)
-    emb1 = Embedding(join(FLAGS.data_root, FLAGS.lang1_emb_file))
+    emb1 = pickle.load(open("./sav_model/pretrained/emb1.pickle", "rb", -1))
+    # emb1 = Embedding(join(FLAGS.data_root, FLAGS.lang1_emb_file))
     emb1_size = len(emb1.vocab)
     emb = MultiLanguageEmbedding(emb0, emb1)
     vocab = emb.get_vocab()
     emb_matrix = emb.get_emb()
 
-    # results = evaluator.word_translation()
-
-    strong, weak = read_pair()
-    strong_id, weak_id, l0_dict, l1_dict = pair2id(strong, weak, emb)
-
-    ctxemb0 = Embedding(join(FLAGS.data_root, FLAGS.lang0_ctxemb_file))
-    ctxemb1 = Embedding(join(FLAGS.data_root, FLAGS.lang1_ctxemb_file))
+    ctxemb0 = pickle.load(open("./sav_model/pretrained/emb0_cxt.pickle", "rb", -1))
+    # ctxemb0 = Embedding(join(FLAGS.data_root, FLAGS.lang0_ctxemb_file))
+    ctxemb1 = pickle.load(open("./sav_model/pretrained/emb1_cxt.pickle", "rb", -1))
+    # ctxemb1 = Embedding(join(FLAGS.data_root, FLAGS.lang1_ctxemb_file))
     ctxemb = MultiLanguageEmbedding(ctxemb0, ctxemb1)
     ctxvocab = ctxemb.get_vocab()
     ctxemb_matrix = ctxemb.get_emb()
+    logging.info('load embedding done')
+
+
+
+    strong, weak = read_pair()
+    strong_id, weak_id, l0_dict, l1_dict = pair2id(strong, weak, emb)
 
     assert tuple(ctxvocab) == tuple(vocab)
 
@@ -131,7 +140,6 @@ def main(argv):
         window_size=FLAGS.word2vec_negative_size,
         negative_samples=FLAGS.word2vec_negative_size,
         batch_size=FLAGS.word2vec_batch_size
-
     )
 
     mono1_iterator = Word2vecIterator(
@@ -153,11 +161,11 @@ def main(argv):
         batch_size=FLAGS.bilbowa_batch_size
     )
 
-    multi_iterator.logging_debug(emb)
+    # multi_iterator.logging_debug(emb)
 
     # strong pair iterator
     strong_batch_size = 1000
-    strong_negative_size = 0
+    strong_negative_size = 5
     strong_pair_iterator = strong_pairIterator(
         strong_id,
         mono0_unigram_table,
@@ -181,6 +189,8 @@ def main(argv):
         l1_dict=l1_dict
     )
 
+    word_emb_matrix = emb_matrix
+    context_emb_matrix = ctxemb_matrix #emb_matrix, ctxemb_matrix
     (
         word2vec_model,
         bilbowa_model,
@@ -191,15 +201,19 @@ def main(argv):
         strong_pair_model_infer,
         weak_pair_model_infer,
         word_emb,
-
+        word_emb_cxt,
+        diff_sent_encoded
     ) = get_model(
         nb_word=len(vocab),
         dim=FLAGS.emb_dim,
         length=FLAGS.bilbowa_sent_length,
         desc_length=FLAGS.encoder_desc_length,
-        word_emb_matrix=None,
-        context_emb_matrix=None
+        s_negative_samples=strong_negative_size,
+        w_negative_samples=weak_negative_size,
+        word_emb_matrix=word_emb_matrix,
+        context_emb_matrix=context_emb_matrix
     ) #emb_matrix, ctxemb_matrix
+
 
     logging.info('word2vec_model.summary()')
     word2vec_model.summary()
@@ -216,7 +230,6 @@ def main(argv):
         optimizer=(Adam(amsgrad=True) if FLAGS.bilbowa_lr < 0 else Adam(
             lr=FLAGS.bilbowa_lr, amsgrad=True)),
         loss=bilbowa_loss)
-
     strong_pair_model_lr = 0.001
     strong_pair_model.compile(
         optimizer=(Adam(amsgrad=True) if strong_pair_model_lr < 0 else Adam(
@@ -238,9 +251,8 @@ def main(argv):
     # weak
     keys = []
     # if FLAGS.train_mono:
-    keys.append('mono0')
-    keys.append('mono1')
-    # if FLAGS.train_multi:
+    # keys.append('mono0')
+    # keys.append('mono1')
     # keys.append('multi')
     keys.append('strong_pair')
     keys.append('weak_pair')
@@ -254,17 +266,22 @@ def main(argv):
         prefix = "dim" + str(dim) + "_"
         for i in keys:
             if(i == "mono0"):
-                prefix += "mono_"
+                prefix += "mono_" + str(FLAGS.word2vec_lr) + "_"
             elif(i == "multi"):
-                prefix += "multi_"
+                prefix += "multi_" + str(FLAGS.bilbowa_lr) + "_"
             elif(i == "strong_pair"):
-                prefix = prefix + "s" + str(strong_negative_size) + "_"
+                prefix = prefix + "s" + str(strong_negative_size) + "_" + str(strong_pair_model_lr) + "_"
             elif (i == "weak_pair"):
-                prefix = prefix + "w" + str(weak_negative_size) + "_"
+                prefix = prefix + "w" + str(weak_negative_size) + "_"  + str(weak_pair_model_lr) + "_"
 
         now = datetime.datetime.now()
         date = '%02d%02d' % (now.month, now.day)  # two digits month/day
         identifier = date + "_" + prefix
+        if(word_emb_matrix is None):
+            word_emb_matrix_str = "None"
+        else:
+            word_emb_matrix_str = "Pretrained"
+        identifier = identifier + word_emb_matrix_str
         # identifier = '_'.join([prefix, date, str(lr), str(dim), str(batch_size), str(p_neg)])
         return identifier
 
@@ -274,17 +291,29 @@ def main(argv):
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
-    def save_emb_obj(word_emb_np, save_dir):
+    def save_emb_obj(word_emb_np, word_emb_cxt,save_dir):
         emb0_save = word_emb_np[0:emb0_size, :]
         emb1_save = word_emb_np[emb0_size:, :]
         emb0.emb = emb0_save
         emb1.emb = emb1_save
+        embedding0_cxt = word_emb_cxt[0:emb0_size, :]
+        embedding1_cxt = word_emb_cxt[emb0_size:, :]
+        ctxemb0.emb = embedding0_cxt
+        ctxemb1.emb = embedding1_cxt
+
         dir0 = join(save_dir, "emb0.pickle")
         dir1 = join(save_dir, "emb1.pickle")
+        dir3= join(save_dir, "emb0_cxt.pickle")
+        dir4 = join(save_dir, "emb1_cxt.pickle")
         with open(dir0, "wb") as file_:
             pickle.dump(emb0, file_, -1)
         with open(dir1, "wb") as file_:
             pickle.dump(emb1, file_, -1)
+        with open(dir3, "wb") as file_:
+            pickle.dump(ctxemb0, file_, -1)
+        with open(dir4, "wb") as file_:
+            pickle.dump(ctxemb1, file_, -1)
+
 
     '''
     Train Model
@@ -340,7 +369,14 @@ def main(argv):
             start_time = time.time()
             loss = bilbowa_model.train_on_batch(x=x, y=y)
             this_comp_time = time.time() - start_time
-
+            # out = bilbowa_model.predict(x)
+            # print("diff_sent_encoded", out)
+            # loss_s = K.mean(K.square(out), axis=-1)
+            # loss_t = K.mean(loss_s, axis=-1)
+            # loss_s = K.eval(loss_s)
+            # loss_t = K.eval(loss_t)
+            # print("loss_s", loss_s)
+            # print("loss_t", loss_t)
 
         elif next_key == 'strong_pair':
             start_time = time.time()
@@ -348,7 +384,8 @@ def main(argv):
             this_load_time = time.time() - start_time
             start_time = time.time()
             loss = strong_pair_model.train_on_batch(x=x, y=y)
-            # print("L2 DIST", strong_pair_model.predict(x)[1])
+            # print(K.eval(output_s))
+            # print("L2 DIST", strong_pair_model.predict(x))
 
             this_comp_time = time.time() - start_time
         elif next_key == 'weak_pair':
@@ -385,7 +422,7 @@ def main(argv):
 
 
         if should_exit or (total_this_comp_time - last_logging_time >
-                           10): # FLAGS.logging_iterval
+                           5): # FLAGS.logging_iterval
             last_logging_time = total_this_comp_time
             # logging.info('Stats so far')
             # logging.info('next_key = %s', next_key)
@@ -404,10 +441,10 @@ def main(argv):
 
 
         if should_exit or (total_this_comp_time - last_eval_time >
-                           1):
+                           250):
             last_eval_time = total_this_comp_time
             # evaluate:
-            if (next_key == 'mono1' or next_key == 'mono0'):
+            if (0): # next_key == 'mono1' or next_key == 'mono0'
                 pass
             else:
                 word_emb_np = word_emb.get_weights()[0]
@@ -447,14 +484,16 @@ def main(argv):
 
         # save model
         if should_exit or (total_this_comp_time - last_saving_time >
-                           100): #FLAGS.saving_iterval
+                           250): #FLAGS.saving_iterval
             last_saving_time = total_this_comp_time
             logging.info('Saving Embedding started.')
 
             # save embedding:
             print('The model will be stored in: ', save_dir)
             word_emb_np = word_emb.get_weights()[0]
-            save_emb_obj(word_emb_np, save_dir)
+            word_emb_cxt_np = word_emb_cxt.get_weights()[0]
+
+            save_emb_obj(word_emb_np,word_emb_cxt_np, save_dir)
             logging.info('Saving Embedding done.')
 
         if should_exit:

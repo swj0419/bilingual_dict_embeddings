@@ -68,7 +68,8 @@ def load_dictionary(path, word2id1, word2id2):
                 "(%i in lang1, %i in lang2)"
                 % (len(pairs), len(set([x for x, _ in pairs])),
                    not_found, not_found1, not_found2))
-
+    print("not_found1", not_found1)
+    print("not_found2", not_found2)
     # sort the dictionary by source word frequencies
     pairs = sorted(pairs, key=lambda x: word2id1[x[0]])
     dico = torch.LongTensor(len(pairs), 2)
@@ -93,7 +94,6 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     dico = dico.cuda() if emb1.is_cuda else dico
 
 
-
     assert dico[:, 0].max() < emb1.size(0)
     assert dico[:, 1].max() < emb2.size(0)
 
@@ -101,14 +101,13 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     emb1 = emb1 / emb1.norm(2, 1, keepdim=True).expand_as(emb1)
     emb2 = emb2 / emb2.norm(2, 1, keepdim=True).expand_as(emb2)
 
-
     # nearest neighbors
     query = emb1[dico[:, 0]]
     scores = query.mm(emb2.transpose(0, 1))
     results = []
     top_matches = scores.topk(10, 1, True)[1]
     top_scores = scores.topk(10, 1, True)[0]
-
+    print("///")
 
 
     # emb1 = np.array(emb1)
@@ -145,6 +144,7 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
         logger.info("%i source words - Precision at k = %i: %f" %
                     (len(matching), k, precision_at_k))
         results.append(('precision_at_%i' % k, precision_at_k))
+        print(k, precision_at_k)
         # if(k == 1):
         #     with open("./eval_result/precision@1", "w"):
 

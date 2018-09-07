@@ -7,7 +7,7 @@ import math
 from multiprocessing import Process, Queue
 import random
 
-from joblib import Parallel, delayed
+# from joblib import Parallel, delayed
 import numpy as np
 import numpy
 from tqdm import tqdm
@@ -16,7 +16,6 @@ import yaml
 from absl import app
 from absl import flags
 from absl import logging
-from chainer.backends import cuda
 
 
 
@@ -221,11 +220,10 @@ def iter_word2vec_batched_func(kwargs, batched_raw_line):
     # special (w, -1) pair for place holder where negative example exists
 
     is_new_instance = []
-
+    # print("subsampled_batched_row", subsampled_batched_row)
     for row in subsampled_batched_row:
         row_length = len(row)
         for i in range(row_length):
-
             window_start = max(0, i - window_size)
             window_end = min(row_length, i + window_size + 1)
 
@@ -239,7 +237,7 @@ def iter_word2vec_batched_func(kwargs, batched_raw_line):
 
     negative_c_list_as_array = negative_sampler.sample(
         negative_samples * len(positive_w_c_pair_list))
-
+    # print("done")
     return positive_w_c_pair_list, is_new_instance, negative_c_list_as_array
 
 
@@ -270,7 +268,7 @@ class LazyIndexCorpus(object):
         self.counts = counts['counts']
 
         self.ids_filepath = filepath + '.ids.txt'
-
+        # self.ids_filepath = filepath + '.txt'
         self.max_lines = max_lines
         self.iter_async_allowed = iter_async_allowed
         self.iter_async_nb_works = iter_async_nb_works ###???
@@ -747,11 +745,11 @@ class BilbowaIterator(object):
                     sent_1[i, :length_1] = row_1
                     mask_0[i, :length_0] = 1.0
                     mask_1[i, :length_1] = 1.0
-                    # print("sent_0", sent_0[i, :length_0])
-                    # print("sent_1",sent_1[i, :length_1])
-                    # print("mask_0", mask_0[i, :length_0])
-                # print(sent_0)
-                # print(mask_0)
+
+                # print("sent_0", sent_0)
+                # print("mask_0", mask_0)
+                # print("sent_1", sent_1)
+                # print("mask_1", mask_1)
                 yield ([sent_0, mask_0, sent_1, mask_1], y), (epoch, instance)
         except StopIteration:
             pass
@@ -780,18 +778,27 @@ class BilbowaIterator(object):
             if epochs > -1 and epoch >= epochs:
                 break
 
-    def logging_debug(self, emb, nb_example=500):
+    def logging_debug(self, emb, nb_example=10000):
         logging.info('logging bilbowa iterator')
         vocab = emb.get_vocab()
+        # print("1000862", vocab[1000862])
+        #
         for i, blob in enumerate(self.iter_example()):
             if nb_example > -1 and i >= nb_example:
                 break
             (row_0, row_1), _ = blob
+            print(row_0)
+            list0 = [vocab[_] for _ in row_0]
+            print(list0)
+            # logging.info('lang 0 sent %d %s', i,
+            #              ' '.join([vocab[_] for _ in row_0]))
 
-            logging.info('lang 0 sent %d %s', i,
-                         ' '.join([vocab[_] for _ in row_0]))
-            logging.info('lang 1 sent %d %s', i,
-                         ' '.join([vocab[_] for _ in row_1]))
+            print(row_1)
+            list1 = [vocab[_] for _ in row_1]
+            print(list1)
+            print("///////")
+            # logging.info('lang 1 sent %d %s', i,
+            #              ' '.join([vocab[_] for _ in row_1]))
 
 
 
@@ -869,21 +876,19 @@ class strong_pairIterator(object):
 
         l0_s_words = np.zeros(shape=batch_size, dtype=np.int32)
         l1_s_words = np.zeros(shape=batch_size, dtype=np.int32)
-        y = np.empty(shape=batch_size, dtype=np.float32)  # dummy
+        l0_s_n_words = np.zeros(shape=(batch_size, self.negative_samples), dtype=np.int32)
+        l1_s_n_words = np.zeros(shape=(batch_size, self.negative_samples), dtype=np.int32)
+        y = np.zeros(shape=batch_size, dtype=np.float32)  # dummy
 
         try:
             while True:
                 for i in range(batch_size):
-                    pair, label, (epoch, instance) = next(it)
+                    pair, neg_pair_list, (epoch, instance) = next(it)
                     l0_s_words[i] = pair[0]
                     l1_s_words[i] = pair[1]
-                    if(label == -1):
-                        y[i] = label * 0.01
-                    else:
-                        y[i] = label
-                    # print(l0_s_words[i], l1_s_words[i], label)
-
-                yield ([l0_s_words, l1_s_words], y), (epoch, instance)
+                    l0_s_n_words[i,:] = neg_pair_list[:,0]
+                    l1_s_n_words[i,:] = neg_pair_list[:,1]
+                yield ([l0_s_words, l1_s_words,l0_s_n_words, l1_s_n_words], y), (epoch, instance)
 
         except StopIteration:
             pass
@@ -895,10 +900,12 @@ class strong_pairIterator(object):
         while True:
             for pair in self.strong_id:
                 instance += 1
-                yield pair, 1, (epoch, instance)
+                # yield pair, 1, (epoch, instance)
 
+                neg_pair_list = np.zeros(shape=(self.negative_samples,2), dtype=np.int32)
                 l0_negative_list = self.l0_unigram_table.negative_sampler.sample(int(self.negative_samples/2)+3)
                 l1_negative_list = self.l1_unigram_table.negative_sampler.sample(int(self.negative_samples/2)+3)
+
                 count = 0
                 for id in l0_negative_list: ##l0 = en
                     if(id in self.l1_dict[pair[0]]): ##l1 = fr
@@ -907,8 +914,10 @@ class strong_pairIterator(object):
                     else:
                         if(count < self.negative_samples/2):
                             neg_pair = (pair[0],id)
+                            neg_pair_list[count, 0] = neg_pair[0]
+                            neg_pair_list[count, 1] = neg_pair[1]
                             count += 1
-                            yield neg_pair, -1, (epoch, instance)
+                            # yield neg_pair, -1, (epoch, instance)
 
                 for id in l1_negative_list: #fr
                     if(id in self.l0_dict[pair[1]]):
@@ -917,8 +926,13 @@ class strong_pairIterator(object):
                     else:
                         if(count < self.negative_samples):
                             neg_pair = (id, pair[1])
+                            neg_pair_list[count, 0] = neg_pair[0]
+                            neg_pair_list[count, 1] = neg_pair[1]
                             count += 1
-                            yield neg_pair, -1, (epoch, instance)
+                            # yield neg_pair, -1, (epoch, instance)
+                # print(neg_pair_list)
+                # print("neg_pair_list", neg_pair_list)
+                yield pair, neg_pair_list, (epoch, instance)
 
             epoch += 1
             if epochs > -1 and epoch >= epochs:
@@ -953,22 +967,20 @@ class weak_pairIterator(object):
 
         l0_w_words = np.zeros(shape=batch_size, dtype=np.int32)
         l1_w_words = np.zeros(shape=batch_size, dtype=np.int32)
-        labels = np.zeros(shape=batch_size, dtype=np.int32)
-        y = np.empty(shape=batch_size, dtype=np.float32)  # dummy
+        l0_w_n_words = np.zeros(shape=(batch_size, self.negative_samples), dtype=np.int32)
+        l1_w_n_words = np.zeros(shape=(batch_size, self.negative_samples), dtype=np.int32)
+        y = np.zeros(shape=batch_size, dtype=np.float32)  # dummy
 
         try:
             while True:
                 y[:] = 0
                 for i in range(batch_size):
-                    pair, label, (epoch, instance) = next(it)
+                    pair, neg_pair_list, (epoch, instance) = next(it)
                     l0_w_words[i] = pair[0]
                     l1_w_words[i] = pair[1]
-                    if (label == -1):
-                        y[i] = label * 0.01
-                    else:
-                        y[i] = label
-
-                yield ([l0_w_words, l1_w_words], y), (epoch, instance)
+                    l0_w_n_words[i, :] = neg_pair_list[:, 0]
+                    l1_w_n_words[i, :] = neg_pair_list[:, 1]
+                yield ([l0_w_words, l1_w_words, l0_w_n_words, l1_w_n_words], y), (epoch, instance)
 
         except StopIteration:
             pass
@@ -982,10 +994,11 @@ class weak_pairIterator(object):
         while True:
             for pair in self.weak_id:
                 instance += 1
-                yield pair,1,(epoch,instance)
-
+                # yield pair,1,(epoch,instance)
+                neg_pair_list = np.zeros(shape=(self.negative_samples,2), dtype=np.int32)
                 l0_negative_list = self.l0_unigram_table.negative_sampler.sample(int(self.negative_samples / 2) + 3)
                 l1_negative_list = self.l1_unigram_table.negative_sampler.sample(int(self.negative_samples / 2) + 3)
+
                 count = 0
                 for id in l0_negative_list:
                     if (id in self.l1_dict[pair[0]]):
@@ -993,8 +1006,10 @@ class weak_pairIterator(object):
                     else:
                         if (count < self.negative_samples / 2):
                             neg_pair = (pair[0],id)
+                            neg_pair_list[count, 0] = neg_pair[0]
+                            neg_pair_list[count, 1] = neg_pair[1]
                             count += 1
-                            yield neg_pair, -1, (epoch, instance)
+                            # yield neg_pair, -1, (epoch, instance)
                         else:
                             break
 
@@ -1004,10 +1019,13 @@ class weak_pairIterator(object):
                     else:
                         if (count < self.negative_samples):
                             neg_pair = (id, pair[1])
+                            neg_pair_list[count, 0] = neg_pair[0]
+                            neg_pair_list[count, 1] = neg_pair[1]
                             count += 1
-                            yield neg_pair, -1, (epoch, instance)
+                            # yield neg_pair, -1, (epoch, instance)
                         else:
                             break
+                yield pair, neg_pair_list, (epoch, instance)
 
 
             epoch += 1

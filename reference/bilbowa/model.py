@@ -27,10 +27,12 @@ def get_model(
         dim,
         length,
         desc_length,
+        s_negative_samples,
+        w_negative_samples,
         word_emb_matrix=None,
         context_emb_matrix=None,
         word_emb_trainable=True,
-        context_emb_trainable=True,
+        context_emb_trainable=True
 ):
     # parameter
     def make_emb(emb_matrix=None, trainable=True):
@@ -123,25 +125,69 @@ def get_model(
     # strong Pair model
     l0_s = Input(shape=(1,))
     l1_s = Input(shape=(1,))
+    l0_s_n_lists = Input(shape=(s_negative_samples,))
+    l1_s_n_lists = Input(shape=(s_negative_samples,))
 
 
     l0_s_embedded = word_emb(l0_s)
     l1_s_embedded = word_emb(l1_s)
+    l0_s_n_lists_embedded = word_emb(l0_s_n_lists)
+    l1_s_n_lists_embedded = word_emb(l1_s_n_lists)
 
 
     def l2_dist(x):
         y_true, y_pred = x
         l2 = K.mean(K.square(y_true - y_pred), axis=-1, keepdims=True)
         l2 = Flatten()(l2)
+        l2 = K.exp(-l2)
+        return l2
+
+    def l2_dist_sum(x):
+        '''
+        y_true_list: batch_size x 10 x embedding_dim
+        y_pred_list:
+        '''
+        y_true_list, y_pred_list = x
+        l2 = K.mean(K.square(y_true_list - y_pred_list), axis=-1)
+        l2_e = K.exp(-l2)
+        print("l2_e", l2_e)
+        l2 = K.sum(l2_e, axis = -1)
         return l2
 
     l2_dist_s_encode = Lambda(l2_dist)([
         l0_s_embedded,
-        l1_s_embedded,
+        l1_s_embedded
     ])
 
-    strong_pair_model = Model(inputs=[l0_s, l1_s], outputs=l2_dist_s_encode)
+    l2_dist_s_n_encode = Lambda(l2_dist_sum)([
+        l0_s_n_lists_embedded,
+        l1_s_n_lists_embedded
+    ])
 
+    print("s_negative_samples", s_negative_samples)
+
+
+    def sub_loss(x):
+        pos, neg = x
+        loss = K.log(pos / neg)
+        return loss
+
+    def sub_loss_neg0(x):
+        pos = x
+        loss = K.log(pos)
+        return loss
+
+    if (s_negative_samples == 0):
+        output_s = Lambda(sub_loss_neg0)([
+            l2_dist_s_encode
+        ])
+    else:
+        output_s = Lambda(sub_loss)([
+            l2_dist_s_encode,
+            l2_dist_s_n_encode
+        ])
+
+    strong_pair_model = Model(inputs=[l0_s, l1_s, l0_s_n_lists, l1_s_n_lists], outputs=output_s)
 
     # infer
     strong_pair_model_infer = Model(
@@ -151,17 +197,37 @@ def get_model(
     # weak pair mode
     l0_w = Input(shape=(1,))
     l1_w = Input(shape=(1,))
+    l0_w_n_lists = Input(shape=(w_negative_samples,))
+    l1_w_n_lists = Input(shape=(w_negative_samples,))
 
     l0_w_embedded = word_emb(l0_w)
     l1_w_embedded = word_emb(l1_w)
+    l0_w_n_lists_embedded = word_emb(l0_w_n_lists)
+    l1_w_n_lists_embedded = word_emb(l1_w_n_lists)
 
     l2_dist_w_encode = Lambda(l2_dist)([
         l0_w_embedded,
-        l1_w_embedded,
+        l1_w_embedded
     ])
 
+    l2_dist_w_n_encode = Lambda(l2_dist_sum)([
+        l0_w_n_lists_embedded,
+        l1_w_n_lists_embedded
+    ])
 
-    weak_pair_model = Model(inputs=[l0_w, l1_w], outputs=l2_dist_w_encode)
+    print("w_negative_samples", w_negative_samples)
+
+    if (w_negative_samples == 0):
+        output_w = Lambda(sub_loss_neg0)([
+            l2_dist_w_encode
+        ])
+    else:
+        output_w = Lambda(sub_loss)([
+            l2_dist_w_encode,
+            l2_dist_w_n_encode
+        ])
+
+    weak_pair_model = Model(inputs=[l0_w, l1_w, l0_w_n_lists, l1_w_n_lists], outputs=output_w)
 
     # infer
     weak_pair_model_infer = Model(
@@ -176,7 +242,11 @@ def get_model(
         bilbowa_model_infer,
         strong_pair_model_infer,
         weak_pair_model_infer,
-        word_emb
+        word_emb,
+        context_emb,
+        diff_sent_encoded
+
+
     )
 
 
@@ -192,9 +262,11 @@ def bilbowa_loss(y_true, y_pred):
     return K.mean(K.square(diff_sent_encoded), axis=-1)
 
 def strong_pair_loss(y_true, y_pred):
-    return 0.7 * (-1) * y_true * K.log(K.exp(-y_pred))
+    return 0.7 * (-1) * y_pred
+    # return 0.7 * (-1) * K.log(y_pred)
+
 
 def weak_pair_loss(y_true, y_pred):
-    return 0.3 * (-1) * y_true * K.log(K.exp(-y_pred))
+    return 0.4 * (-1) * y_pred
 
 

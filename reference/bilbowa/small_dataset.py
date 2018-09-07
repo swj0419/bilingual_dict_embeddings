@@ -8,8 +8,28 @@ def hasNumbers(inputString):
     return any(char.isdigit() for char in inputString)
 
 # store vocab2id
-emb0 = Embedding("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/reference/bilbowa/small_data_root/withctx.en-fr.en.50.1.txt")
-emb1 = Embedding("/Applications/Setapp/GD/research/cross-lingual/bilingual_dict_embeddings/reference/bilbowa/small_data_root/withctx.en-fr.fr.50.1.txt")
+emb0 = pickle.load(open("./sav_model/0828_dim50_mono_0.001_multi_0.001_Pretrained/emb0.pickle", "rb", -1))
+emb1 = pickle.load(open("./sav_model/0828_dim50_mono_0.001_multi_0.001_Pretrained/emb1.pickle", "rb", -1))
+
+print("begin")
+with open("../../data/train/strong.txt", "r") as f:
+    with open("../../data/train/strong_en_id.txt", "w") as f1:
+        with open("../../data/train/strong_fr_id.txt", "w") as f2:
+            for line in f:
+                line = line.strip().split("\t")
+                en_index = emb0.vocab2id[line[1]]
+                fr_index = emb1.vocab2id[line[0]] + 995000
+                f1.writelines(str(en_index))
+                f1.write("\n")
+                f2.writelines(str(fr_index))
+                f2.write("\n")
+
+
+
+
+
+
+
 
 
 # write dictionary
@@ -181,7 +201,7 @@ with open('emb1_id2vocab.pickle', 'wb') as handle:
 #             counts_1[int(w)-39016] += 1
 # np.savez('./small_data_root/fr_mono.counts.npz', counts=counts_1)
 
-counts = np.load('./small_data_root/fr_mono.counts.npz')['counts']
-zeors = np.zeros(39016)
-counts = np.concatenate((zeors, counts), axis=0)
-np.savez('./small_data_root/fr_mono.counts.npz', counts=counts)
+# counts = np.load('./small_data_root/fr_mono.counts.npz')['counts']
+# zeors = np.zeros(39016)
+# counts = np.concatenate((zeors, counts), axis=0)
+# np.savez('./small_data_root/fr_mono.counts.npz', counts=counts)
