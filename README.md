@@ -1,5 +1,10 @@
 # Learning Bilingual Word Embeddings Using Lexical Definitions
 
+Descriptions to be updated
+
+## Folders
+
+Scripts to be updated
 
 ## Datasets
 
