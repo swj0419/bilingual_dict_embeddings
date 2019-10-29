@@ -4,7 +4,8 @@ Descriptions to be updated
 
 ## Folders
 
-Scripts to be updated
+Scripts to be updated  
+[ctx files](http://yellowstone.cs.ucla.edu/~muhao/dict_embed/)  
 
 ## Datasets
 
